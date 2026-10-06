@@ -57,10 +57,22 @@
                 text-anchor="middle"
                 dominant-baseline="central"
                 class="slice-text"
+                [style.font-size.px]="slice.fontSize"
               >
                 {{ slice.name }}
               </text>
             </g>
+          </g>
+
+          <!-- Remaches decorativos en cada división de sector -->
+          <g *ngFor="let slice of slices">
+            <circle
+              cx="250"
+              cy="12"
+              r="3.5"
+              class="pin"
+              [attr.transform]="'rotate(' + slice.startAngle + ' 250 250)'"
+            />
           </g>
         </g>
 

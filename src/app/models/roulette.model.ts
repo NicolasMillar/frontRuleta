@@ -16,4 +16,5 @@ export interface WheelSlice {
   pathD: string;
   textAngle: number;
   textRadius: number;
+  fontSize: number;
 }

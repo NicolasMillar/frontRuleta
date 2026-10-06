@@ -15,7 +15,7 @@ export class RouletteComponent implements OnInit {
   // Lista de participantes activa sincronizada con el servicio
   participants: Participant[] = [];
 
-  // Sectores geométricos de la ruleta moldeados a partir de los participantes
+  // Sectores geométricos de la ruleta moldeados dinámicamente según la cantidad N de participantes
   slices: WheelSlice[] = [];
 
   // Estado del giro
@@ -30,7 +30,7 @@ export class RouletteComponent implements OnInit {
   readonly center = 250;
   readonly radius = 230;
 
-  // Paleta de colores atractiva y contrastante
+  // Paleta de colores atractiva y contrastante (ampliada para más variedad)
   readonly defaultPalette: string[] = [
     '#EF476F', // Rosa / Coral intenso
     '#F78C6B', // Naranja suave
@@ -39,7 +39,11 @@ export class RouletteComponent implements OnInit {
     '#118AB2', // Azul cerceta
     '#073B4C', // Azul marino profundo
     '#8338EC', // Violeta eléctrico
-    '#3A86FF'  // Azul brillante
+    '#3A86FF', // Azul brillante
+    '#E056FD', // Lila neón
+    '#20BF6B', // Verde jade
+    '#FA8231', // Mandarina
+    '#45AAF2'  // Celeste vivo
   ];
 
   constructor(public participantsService: ParticipantsService) {}
@@ -50,7 +54,7 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
-   * Refresca los datos y el moldeado de la ruleta
+   * Refresca los datos y el moldeado de la ruleta dinámicamente
    */
   public refreshWheel(): void {
     this.participants = this.participantsService.participants();
@@ -59,6 +63,7 @@ export class RouletteComponent implements OnInit {
 
   /**
    * Recibe datos de participantes y ejecuta el moldeado de la ruleta.
+   * Funciona para cualquier cantidad N de participantes (aumente o disminuya).
    */
   public loadParticipants(data: Participant[]): void {
     this.participantsService.setParticipants(data);
@@ -66,8 +71,8 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
-   * Función encargada de tomar la lista/JSON de participantes y moldear
-   * las porciones (slices) matemáticas de la ruleta: ángulos, caminos SVG (path) y posición del texto.
+   * Función que toma CUALQUIER lista de participantes y moldea matemáticamente
+   * la ruleta en partes iguales: 360 / N grados.
    */
   public moldWheel(data: Participant[]): WheelSlice[] {
     if (!data || data.length === 0) {
@@ -76,29 +81,34 @@ export class RouletteComponent implements OnInit {
 
     const total = data.length;
     const sliceAngle = 360 / total;
+    const fontSize = this.calculateFontSize(total);
 
     return data.map((item, index) => {
       const startAngle = index * sliceAngle;
       const endAngle = (index + 1) * sliceAngle;
       const midAngle = startAngle + sliceAngle / 2;
 
-      // Color asignado o provisto en el JSON
-      const color = item.color || this.defaultPalette[index % this.defaultPalette.length];
+      // Color garantizado sin colisiones adyacentes
+      const color = item.color || this.assignColor(index, total);
 
-      // Cálculo del Path SVG (arco circular desde el centro)
-      // Ajustamos 0° para que comience en las 12 en punto (-90° en coordenadas estándar)
-      const startRad = ((startAngle - 90) * Math.PI) / 180;
-      const endRad = ((endAngle - 90) * Math.PI) / 180;
+      let pathD: string;
 
-      const x1 = this.center + this.radius * Math.cos(startRad);
-      const y1 = this.center + this.radius * Math.sin(startRad);
-      const x2 = this.center + this.radius * Math.cos(endRad);
-      const y2 = this.center + this.radius * Math.sin(endRad);
+      // Caso especial si solo hay 1 participante (círculo completo)
+      if (total === 1) {
+        pathD = `M ${this.center} ${this.center - this.radius} A ${this.radius} ${this.radius} 0 1 1 ${this.center - 0.01} ${this.center - this.radius} Z`;
+      } else {
+        // Ajustamos 0° para que comience en las 12 en punto (-90° en coordenadas estándar)
+        const startRad = ((startAngle - 90) * Math.PI) / 180;
+        const endRad = ((endAngle - 90) * Math.PI) / 180;
 
-      const largeArcFlag = sliceAngle > 180 ? 1 : 0;
+        const x1 = this.center + this.radius * Math.cos(startRad);
+        const y1 = this.center + this.radius * Math.sin(startRad);
+        const x2 = this.center + this.radius * Math.cos(endRad);
+        const y2 = this.center + this.radius * Math.sin(endRad);
 
-      // Comando SVG Path: Mueve al centro, dibuja línea al inicio del arco, arco hasta el final, cierra al centro
-      const pathD = `M ${this.center} ${this.center} L ${x1.toFixed(3)} ${y1.toFixed(3)} A ${this.radius} ${this.radius} 0 ${largeArcFlag} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} Z`;
+        const largeArcFlag = sliceAngle > 180 ? 1 : 0;
+        pathD = `M ${this.center} ${this.center} L ${x1.toFixed(3)} ${y1.toFixed(3)} A ${this.radius} ${this.radius} 0 ${largeArcFlag} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} Z`;
+      }
 
       return {
         id: item.id,
@@ -110,13 +120,42 @@ export class RouletteComponent implements OnInit {
         midAngle,
         pathD,
         textAngle: midAngle,
-        textRadius: this.radius * 0.65
+        textRadius: this.radius * 0.65,
+        fontSize
       };
     });
   }
 
   /**
-   * Ejecuta el giro lógico de la ruleta con cálculo angular exacto para el ganador.
+   * Asigna colores dinámicos evitando que sectores adyacentes repitan color.
+   */
+  private assignColor(index: number, total: number): string {
+    if (total <= this.defaultPalette.length) {
+      let colorIndex = index % this.defaultPalette.length;
+      // Si el último coincide con el primero (por vuelta completa), elegimos otro tono de la paleta
+      if (index === total - 1 && colorIndex === 0 && total > 1) {
+        colorIndex = 1;
+      }
+      return this.defaultPalette[colorIndex];
+    }
+    // Si hay más participantes que colores en la paleta, generamos tonos armónicos continuos en HSL
+    const hue = Math.round((index * 360) / total);
+    return `hsl(${hue}, 75%, 52%)`;
+  }
+
+  /**
+   * Adapta el tamaño del texto dinámicamente según la cantidad de participantes
+   */
+  private calculateFontSize(total: number): number {
+    if (total <= 6) return 16;
+    if (total <= 10) return 14;
+    if (total <= 16) return 12;
+    if (total <= 24) return 10;
+    return 8;
+  }
+
+  /**
+   * Ejecuta el giro lógico adaptado a cualquier cantidad N de sectores.
    */
   public spin(): void {
     if (this.isSpinning || this.slices.length === 0) {
@@ -126,14 +165,14 @@ export class RouletteComponent implements OnInit {
     this.isSpinning = true;
     this.winner = null;
 
-    // 1. Seleccionar ganador al azar
+    // 1. Seleccionar ganador al azar entre los N participantes actuales
     const winnerIndex = Math.floor(Math.random() * this.slices.length);
     const selectedWinner = this.participants[winnerIndex];
     const winningSlice = this.slices[winnerIndex];
 
     // 2. Calcular ángulo exacto para que el sector ganador quede bajo el puntero superior (12 en punto)
     const sliceAngle = 360 / this.slices.length;
-    // Agregamos una ligera variación aleatoria dentro del propio sector para realismo visual (±30% del sector)
+    // Variación aleatoria natural dentro del sector (±30%)
     const randomOffsetInSlice = (Math.random() - 0.5) * (sliceAngle * 0.6);
     const targetSliceAngle = winningSlice.midAngle + randomOffsetInSlice;
 
@@ -152,7 +191,6 @@ export class RouletteComponent implements OnInit {
     // 3. Al concluir la animación CSS (5 segundos), actualizamos contador y anunciamos
     setTimeout(() => {
       this.isSpinning = false;
-      // Incrementamos las victorias en el servicio compartido
       const updatedWinner = this.participantsService.incrementWins(selectedWinner.id);
       this.winner = updatedWinner || selectedWinner;
       this.refreshWheel();
