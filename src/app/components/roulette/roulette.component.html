@@ -1,0 +1,93 @@
+<div class="roulette-container">
+  <!-- Encabezado / Título de la Ruleta -->
+  <header class="roulette-header">
+    <h1 class="title">Ruleta de Participantes</h1>
+    <p class="subtitle">{{ participants.length }} participantes listos para jugar</p>
+  </header>
+
+  <!-- Contenedor visual de la ruleta y la aguja -->
+  <div class="wheel-wrapper">
+    <!-- Puntero / Indicador Superior (Flecha) -->
+    <div class="wheel-pointer">
+      <svg viewBox="0 0 40 50" class="pointer-svg">
+        <defs>
+          <filter id="pointer-shadow" x="-20%" y="-20%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity="0.45" />
+          </filter>
+        </defs>
+        <path d="M 20 48 L 5 8 C 5 2 35 2 35 8 Z" fill="#FFD166" stroke="#FFFFFF" stroke-width="2" filter="url(#pointer-shadow)" />
+        <circle cx="20" cy="14" r="5" fill="#EF476F" />
+      </svg>
+    </div>
+
+    <!-- Rueda SVG -->
+    <div class="wheel-stage">
+      <svg viewBox="0 0 500 500" class="wheel-svg">
+        <defs>
+          <!-- Sombra interior y relieve -->
+          <radialGradient id="hubGradient" cx="40%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="50%" stop-color="#ffd166" />
+            <stop offset="100%" stop-color="#b58300" />
+          </radialGradient>
+          <filter id="wheel-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.35" />
+          </filter>
+        </defs>
+
+        <!-- Anillo exterior decorativo -->
+        <circle cx="250" cy="250" r="245" class="outer-ring" filter="url(#wheel-shadow)" />
+        <circle cx="250" cy="250" r="236" class="inner-border-ring" />
+
+        <!-- Grupo principal giratorio de los sectores -->
+        <g id="wheelDisc" class="wheel-disc">
+          <!-- Sectores moldeados dinámicamente -->
+          <g *ngFor="let slice of slices; let i = index" class="slice-group">
+            <path [attr.d]="slice.pathD" [attr.fill]="slice.color" class="slice-path" />
+
+            <!-- Texto del participante -->
+            <!-- Rotamos el eje radial hacia el ángulo medio del sector -->
+            <g [attr.transform]="'rotate(' + (slice.midAngle - 90) + ' 250 250)'">
+              <text
+                x="375"
+                y="250"
+                text-anchor="middle"
+                dominant-baseline="central"
+                class="slice-text"
+              >
+                {{ slice.name }}
+              </text>
+            </g>
+          </g>
+        </g>
+
+        <!-- Remaches decorativos en el borde exterior -->
+        <g *ngFor="let slice of slices">
+          <circle
+            [attr.cx]="250 + 240 * 0.98 * 0 + 250"
+            cy="250"
+            r="3"
+            class="pin"
+            [attr.transform]="'rotate(' + slice.startAngle + ' 250 250)'"
+          />
+        </g>
+
+        <!-- Eje central decorativo (Tapa/Hub metálico) -->
+        <circle cx="250" cy="250" r="38" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4" filter="url(#pointer-shadow)" />
+        <circle cx="250" cy="250" r="14" fill="#073B4C" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Lista informativa de participantes activos -->
+  <div class="participants-card">
+    <h3 class="card-title">Participantes Cargados</h3>
+    <div class="tags-container">
+      <span *ngFor="let slice of slices" class="participant-tag" [style.border-left-color]="slice.color">
+        <span class="color-dot" [style.background-color]="slice.color"></span>
+        {{ slice.name }}
+      </span>
+    </div>
+  </div>
+</div>
+
