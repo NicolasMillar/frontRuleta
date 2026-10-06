@@ -1,14 +1,14 @@
 <div class="roulette-container">
   <!-- Encabezado / Título de la Ruleta -->
   <header class="roulette-header">
-    <h1 class="title">Ruleta de Participantes</h1>
+    <h1 class="title">Ruleta de la Suerte</h1>
     <p class="subtitle">{{ participants.length }} participantes listos para jugar</p>
   </header>
 
   <!-- Contenedor visual de la ruleta y la aguja -->
   <div class="wheel-wrapper">
     <!-- Puntero / Indicador Superior (Flecha) -->
-    <div class="wheel-pointer">
+    <div class="wheel-pointer" [class.is-spinning]="isSpinning">
       <svg viewBox="0 0 40 50" class="pointer-svg">
         <defs>
           <filter id="pointer-shadow" x="-20%" y="-20%" width="150%" height="150%">
@@ -24,7 +24,6 @@
     <div class="wheel-stage">
       <svg viewBox="0 0 500 500" class="wheel-svg">
         <defs>
-          <!-- Sombra interior y relieve -->
           <radialGradient id="hubGradient" cx="40%" cy="40%" r="60%">
             <stop offset="0%" stop-color="#ffffff" />
             <stop offset="50%" stop-color="#ffd166" />
@@ -40,13 +39,17 @@
         <circle cx="250" cy="250" r="236" class="inner-border-ring" />
 
         <!-- Grupo principal giratorio de los sectores -->
-        <g id="wheelDisc" class="wheel-disc">
+        <g
+          id="wheelDisc"
+          class="wheel-disc"
+          [style.transform]="'rotate(' + currentRotation + 'deg)'"
+          [style.transition]="isSpinning ? 'transform ' + (spinDurationMs / 1000) + 's cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none'"
+        >
           <!-- Sectores moldeados dinámicamente -->
           <g *ngFor="let slice of slices; let i = index" class="slice-group">
             <path [attr.d]="slice.pathD" [attr.fill]="slice.color" class="slice-path" />
 
             <!-- Texto del participante -->
-            <!-- Rotamos el eje radial hacia el ángulo medio del sector -->
             <g [attr.transform]="'rotate(' + (slice.midAngle - 90) + ' 250 250)'">
               <text
                 x="375"
@@ -61,22 +64,31 @@
           </g>
         </g>
 
-        <!-- Remaches decorativos en el borde exterior -->
-        <g *ngFor="let slice of slices">
-          <circle
-            [attr.cx]="250 + 240 * 0.98 * 0 + 250"
-            cy="250"
-            r="3"
-            class="pin"
-            [attr.transform]="'rotate(' + slice.startAngle + ' 250 250)'"
-          />
+        <!-- Eje central decorativo y botón rápido -->
+        <g class="center-hub-group" (click)="spin()" [class.disabled]="isSpinning">
+          <circle cx="250" cy="250" r="42" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4" filter="url(#pointer-shadow)" />
+          <circle cx="250" cy="250" r="16" fill="#073B4C" />
+          <text x="250" y="251" text-anchor="middle" dominant-baseline="central" class="hub-text">
+            {{ isSpinning ? '...' : 'GIRAR' }}
+          </text>
         </g>
-
-        <!-- Eje central decorativo (Tapa/Hub metálico) -->
-        <circle cx="250" cy="250" r="38" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4" filter="url(#pointer-shadow)" />
-        <circle cx="250" cy="250" r="14" fill="#073B4C" />
       </svg>
     </div>
+  </div>
+
+  <!-- Botón de acción principal -->
+  <div class="actions-wrapper">
+    <button
+      class="spin-btn"
+      (click)="spin()"
+      [disabled]="isSpinning || slices.length === 0"
+    >
+      <span class="btn-glow"></span>
+      <span class="btn-content">
+        <span *ngIf="!isSpinning">🎯 ¡GIRAR RULETA!</span>
+        <span *ngIf="isSpinning" class="spinning-text">⏳ GIRANDO...</span>
+      </span>
+    </button>
   </div>
 
   <!-- Lista informativa de participantes activos -->
@@ -89,5 +101,24 @@
       </span>
     </div>
   </div>
-</div>
 
+  <!-- Modal emergente del Ganador -->
+  <div class="winner-modal-backdrop" *ngIf="winner" (click)="closeWinnerModal()">
+    <div class="winner-card" (click)="$event.stopPropagation()">
+      <!-- Botón para cerrar en la esquina -->
+      <button class="modal-close-icon-btn" (click)="closeWinnerModal()" aria-label="Cerrar modal" title="Cerrar">
+        <svg viewBox="0 0 24 24" class="close-icon-svg">
+          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="trophy-icon">🏆</div>
+      <h2 class="winner-heading">¡TENEMOS UN GANADOR!</h2>
+      <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
+        {{ winner.name }}
+      </div>
+      <p class="winner-subtext">¡Felicidades al afortunado seleccionado por la ruleta!</p>
+    </div>
+  </div>
+</div>

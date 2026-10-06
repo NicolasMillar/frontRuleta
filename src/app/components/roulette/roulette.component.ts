@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import confetti from 'canvas-confetti';
 import { Participant, WheelSlice } from '../../models/roulette.model';
 import defaultParticipants from '../../data/participants.json';
 
@@ -16,6 +17,14 @@ export class RouletteComponent implements OnInit {
 
   // Sectores geométricos de la ruleta moldeados a partir de los participantes
   slices: WheelSlice[] = [];
+
+  // Estado del giro
+  isSpinning = false;
+  currentRotation = 0;
+  readonly spinDurationMs = 5000;
+
+  // Participante ganador
+  winner: Participant | null = null;
 
   // Parámetros de la ruleta SVG
   readonly center = 250;
@@ -95,5 +104,91 @@ export class RouletteComponent implements OnInit {
       };
     });
   }
-}
 
+  /**
+   * Ejecuta el giro lógico de la ruleta con cálculo angular exacto para el ganador.
+   */
+  public spin(): void {
+    if (this.isSpinning || this.slices.length === 0) {
+      return;
+    }
+
+    this.isSpinning = true;
+    this.winner = null;
+
+    // 1. Seleccionar ganador al azar
+    const winnerIndex = Math.floor(Math.random() * this.slices.length);
+    const selectedWinner = this.participants[winnerIndex];
+    const winningSlice = this.slices[winnerIndex];
+
+    // 2. Calcular ángulo exacto para que el sector ganador quede bajo el puntero superior (12 en punto)
+    const sliceAngle = 360 / this.slices.length;
+    // Agregamos una ligera variación aleatoria dentro del propio sector para realismo visual (±30% del sector)
+    const randomOffsetInSlice = (Math.random() - 0.5) * (sliceAngle * 0.6);
+    const targetSliceAngle = winningSlice.midAngle + randomOffsetInSlice;
+
+    // El ángulo que debe rotar para que `targetSliceAngle` coincida con la aguja superior (0°)
+    const baseAngle = (360 - (targetSliceAngle % 360)) % 360;
+
+    // Vueltas completas de giro (entre 5 y 8 vueltas completas)
+    const fullTurns = 5 + Math.floor(Math.random() * 3);
+
+    // Calculamos el delta acumulativo para que siempre gire en sentido horario sin retrocesos
+    const currentNormalized = this.currentRotation % 360;
+    const delta = ((baseAngle - currentNormalized + 360) % 360) + (fullTurns * 360);
+
+    this.currentRotation += delta;
+
+    // 3. Al concluir la animación CSS (5 segundos), anunciamos al ganador
+    setTimeout(() => {
+      this.isSpinning = false;
+      this.winner = selectedWinner;
+      this.celebrate();
+    }, this.spinDurationMs);
+  }
+
+  /**
+   * Efecto festivo de confeti al anunciarse el ganador.
+   */
+  private celebrate(): void {
+    if (typeof window !== 'undefined') {
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+
+      // Segunda ráfaga lateral
+      setTimeout(() => {
+        confetti({
+          particleCount: 60,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0.05, y: 0.65 }
+        });
+        confetti({
+          particleCount: 60,
+          angle: 120,
+          spread: 55,
+          origin: { x: 0.95, y: 0.65 }
+        });
+      }, 300);
+    }
+  }
+
+  /**
+   * Retorna el color asignado al ganador
+   */
+  public getWinnerColor(winner: Participant | null): string {
+    if (!winner) return '#FFD166';
+    const slice = this.slices.find(s => s.id === winner.id);
+    return slice?.color || '#FFD166';
+  }
+
+  /**
+   * Cierra el modal del ganador
+   */
+  public closeWinnerModal(): void {
+    this.winner = null;
+  }
+}
