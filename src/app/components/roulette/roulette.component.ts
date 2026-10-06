@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import confetti from 'canvas-confetti';
 import { Participant, WheelSlice } from '../../models/roulette.model';
-import defaultParticipants from '../../data/participants.json';
+import { ParticipantsService } from '../../services/participants.service';
 
 @Component({
   selector: 'app-roulette',
@@ -12,7 +12,7 @@ import defaultParticipants from '../../data/participants.json';
   styleUrl: './roulette.component.css'
 })
 export class RouletteComponent implements OnInit {
-  // Lista de participantes (actualmente cargada del JSON local, lista para conectarse a un API)
+  // Lista de participantes activa sincronizada con el servicio
   participants: Participant[] = [];
 
   // Sectores geométricos de la ruleta moldeados a partir de los participantes
@@ -42,18 +42,27 @@ export class RouletteComponent implements OnInit {
     '#3A86FF'  // Azul brillante
   ];
 
+  constructor(public participantsService: ParticipantsService) {}
+
   ngOnInit(): void {
-    // Inicializamos con el JSON por defecto
-    this.loadParticipants(defaultParticipants);
+    // Sincronizamos con el servicio global de participantes
+    this.refreshWheel();
   }
 
   /**
-   * Recibe el JSON de participantes (desde archivo local o API)
-   * y ejecuta el moldeado de la ruleta.
+   * Refresca los datos y el moldeado de la ruleta
+   */
+  public refreshWheel(): void {
+    this.participants = this.participantsService.participants();
+    this.slices = this.moldWheel(this.participants);
+  }
+
+  /**
+   * Recibe datos de participantes y ejecuta el moldeado de la ruleta.
    */
   public loadParticipants(data: Participant[]): void {
-    this.participants = data;
-    this.slices = this.moldWheel(this.participants);
+    this.participantsService.setParticipants(data);
+    this.refreshWheel();
   }
 
   /**
@@ -94,6 +103,7 @@ export class RouletteComponent implements OnInit {
       return {
         id: item.id,
         name: item.name,
+        wins: item.wins || 0,
         color,
         startAngle,
         endAngle,
@@ -139,10 +149,13 @@ export class RouletteComponent implements OnInit {
 
     this.currentRotation += delta;
 
-    // 3. Al concluir la animación CSS (5 segundos), anunciamos al ganador
+    // 3. Al concluir la animación CSS (5 segundos), actualizamos contador y anunciamos
     setTimeout(() => {
       this.isSpinning = false;
-      this.winner = selectedWinner;
+      // Incrementamos las victorias en el servicio compartido
+      const updatedWinner = this.participantsService.incrementWins(selectedWinner.id);
+      this.winner = updatedWinner || selectedWinner;
+      this.refreshWheel();
       this.celebrate();
     }, this.spinDurationMs);
   }

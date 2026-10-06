@@ -1,0 +1,93 @@
+<div class="ranking-container">
+  <!-- Encabezado de la Sección -->
+  <header class="ranking-header">
+    <div class="header-titles">
+      <h1 class="title">Tabla de Victorias</h1>
+      <p class="subtitle">
+        Total de giros registrados:
+        <span class="highlight-total">{{ participantsService.totalWins() }}</span>
+      </p>
+    </div>
+
+    <!-- Botón de Reinicio -->
+    <div class="header-actions" *ngIf="participantsService.totalWins() > 0">
+      <button class="reset-btn" (click)="resetScores()" title="Reiniciar contadores">
+        <span>🔄</span> Reiniciar Marcador
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabla / Lista de Posiciones -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th class="col-rank">Posición</th>
+            <th class="col-name">Participante</th>
+            <th class="col-wins">Victorias</th>
+            <th class="col-rate">% de Éxito</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let item of rankedParticipants(); let i = index"
+            [class.top-1]="i === 0 && item.wins > 0"
+            [class.top-2]="i === 1 && item.wins > 0"
+            [class.top-3]="i === 2 && item.wins > 0"
+          >
+            <!-- Medalla / Puesto -->
+            <td class="col-rank">
+              <span class="rank-badge" *ngIf="i === 0 && item.wins > 0">🥇 1º</span>
+              <span class="rank-badge" *ngIf="i === 1 && item.wins > 0">🥈 2º</span>
+              <span class="rank-badge" *ngIf="i === 2 && item.wins > 0">🥉 3º</span>
+              <span class="rank-number" *ngIf="!(i < 3 && item.wins > 0)">#{{ i + 1 }}</span>
+            </td>
+
+            <!-- Nombre y Avatar -->
+            <td class="col-name">
+              <div class="participant-info">
+                <span
+                  class="avatar-circle"
+                  [style.background-color]="getParticipantColor(i, item)"
+                >
+                  {{ item.name.charAt(0).toUpperCase() }}
+                </span>
+                <span class="participant-name">{{ item.name }}</span>
+              </div>
+            </td>
+
+            <!-- Contador de Victorias -->
+            <td class="col-wins">
+              <span class="wins-chip" [class.has-wins]="item.wins > 0">
+                {{ item.wins }} {{ item.wins === 1 ? 'victoria' : 'victorias' }}
+              </span>
+            </td>
+
+            <!-- Barra de Progreso y Porcentaje -->
+            <td class="col-rate">
+              <div class="rate-container">
+                <div class="progress-bar-bg">
+                  <div
+                    class="progress-bar-fill"
+                    [style.width.%]="getWinPercentage(item.wins)"
+                    [style.background-color]="getParticipantColor(i, item)"
+                  ></div>
+                </div>
+                <span class="rate-text">{{ getWinPercentage(item.wins) }}%</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Botón de retorno rápido a la ruleta -->
+  <div class="footer-cta">
+    <a routerLink="/ruleta" class="play-btn">
+      <span>🎯</span> Volver a la Ruleta
+    </a>
+  </div>
+</div>
+
