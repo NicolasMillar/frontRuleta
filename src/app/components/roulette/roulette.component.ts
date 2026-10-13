@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import confetti from 'canvas-confetti';
 import { Participant, WheelSlice } from '../../models/roulette.model';
 import { ParticipantsService } from '../../services/participants.service';
+import { LoadingComponent } from '../loading/loading.component';
 
 @Component({
   selector: 'app-roulette',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LoadingComponent],
   templateUrl: './roulette.component.html',
   styleUrl: './roulette.component.css'
 })
@@ -46,10 +47,15 @@ export class RouletteComponent implements OnInit {
     '#45AAF2'  // Celeste vivo
   ];
 
-  constructor(public participantsService: ParticipantsService) {}
+  constructor(public participantsService: ParticipantsService) {
+    // Escucha reactivamente la señal de participantes para redibujar la ruleta
+    // en cuanto el API responda con los datos de Render
+    effect(() => {
+      this.refreshWheel();
+    });
+  }
 
   ngOnInit(): void {
-    // Sincronizamos con el servicio global de participantes
     this.refreshWheel();
   }
 
@@ -110,8 +116,10 @@ export class RouletteComponent implements OnInit {
         pathD = `M ${this.center} ${this.center} L ${x1.toFixed(3)} ${y1.toFixed(3)} A ${this.radius} ${this.radius} 0 ${largeArcFlag} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} Z`;
       }
 
+      const participantId = item._id || item.id || String(index);
+
       return {
-        id: item.id,
+        id: participantId,
         name: item.name,
         wins: item.wins || 0,
         color,
@@ -191,7 +199,8 @@ export class RouletteComponent implements OnInit {
     // 3. Al concluir la animación CSS (5 segundos), actualizamos contador y anunciamos
     setTimeout(() => {
       this.isSpinning = false;
-      const updatedWinner = this.participantsService.incrementWins(selectedWinner.id);
+      const winnerId = selectedWinner._id || selectedWinner.id || '';
+      const updatedWinner = this.participantsService.incrementWins(winnerId);
       this.winner = updatedWinner || selectedWinner;
       this.refreshWheel();
       this.celebrate();

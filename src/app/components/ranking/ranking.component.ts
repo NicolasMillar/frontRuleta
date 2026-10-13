@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ParticipantsService } from '../../services/participants.service';
 import { Participant } from '../../models/roulette.model';
+import { LoadingComponent } from '../loading/loading.component';
 
 @Component({
   selector: 'app-ranking',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoadingComponent],
   templateUrl: './ranking.component.html',
   styleUrl: './ranking.component.css'
 })
@@ -24,10 +25,10 @@ export class RankingComponent {
     '#118AB2', '#073B4C', '#8338EC', '#3A86FF'
   ];
 
-  constructor(public participantsService: ParticipantsService) {}
+  constructor(public participantsService: ParticipantsService) { }
 
   public getParticipantColor(index: number, participant: Participant): string {
-    return participant.color || this.palette[participant.id % this.palette.length];
+    return participant.color || this.palette[index % this.palette.length];
   }
 
   public getWinPercentage(wins: number): number {
@@ -42,4 +43,3 @@ export class RankingComponent {
     }
   }
 }
-

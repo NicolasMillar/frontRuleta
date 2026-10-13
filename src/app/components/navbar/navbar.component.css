@@ -54,6 +54,7 @@
   padding: 0.35rem 0.45rem;
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
 }
 
 .nav-tab {
@@ -69,7 +70,7 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-tab:hover {
+.nav-tab:hover:not(.disabled-tab) {
   color: #f8fafc;
   background: rgba(255, 255, 255, 0.05);
 }
@@ -83,6 +84,17 @@
 
 .tab-icon {
   font-size: 1.1rem;
+}
+
+/* Estado bloqueado mientras el API carga */
+.locked-nav {
+  opacity: 0.85;
+}
+
+.nav-tab.disabled-tab {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Badge de victorias totales */
@@ -103,6 +115,41 @@
   box-shadow: none;
 }
 
+/* Chip de carga en el navbar */
+.loading-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  margin-left: 0.25rem;
+}
+
+.pulse-mini-dot {
+  width: 7px;
+  height: 7px;
+  background: #ffd166;
+  border-radius: 50%;
+  animation: pulseDot 0.9s infinite alternate ease-in-out;
+}
+
+@keyframes pulseDot {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 600px) {
   .navbar-content {
     padding: 0.6rem 1rem;
@@ -116,5 +163,8 @@
     padding: 0.5rem 0.85rem;
     font-size: 0.88rem;
   }
-}
 
+  .chip-text {
+    display: none;
+  }
+}

@@ -1,4 +1,8 @@
-<div class="roulette-container">
+<!-- Pantalla de carga mientras se obtienen los participantes del API de Render -->
+<app-loading *ngIf="participantsService.isLoading()" message="Cargando Ruleta..."
+  subMessage="Obteniendo participantes del servidor..." />
+
+<div class="roulette-container" *ngIf="!participantsService.isLoading()">
   <!-- Encabezado / Título de la Ruleta -->
   <header class="roulette-header">
     <h1 class="title">Ruleta de la Suerte</h1>
@@ -15,7 +19,8 @@
             <feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity="0.45" />
           </filter>
         </defs>
-        <path d="M 20 48 L 5 8 C 5 2 35 2 35 8 Z" fill="#FFD166" stroke="#FFFFFF" stroke-width="2" filter="url(#pointer-shadow)" />
+        <path d="M 20 48 L 5 8 C 5 2 35 2 35 8 Z" fill="#FFD166" stroke="#FFFFFF" stroke-width="2"
+          filter="url(#pointer-shadow)" />
         <circle cx="20" cy="14" r="5" fill="#EF476F" />
       </svg>
     </div>
@@ -39,26 +44,16 @@
         <circle cx="250" cy="250" r="236" class="inner-border-ring" />
 
         <!-- Grupo principal giratorio de los sectores -->
-        <g
-          id="wheelDisc"
-          class="wheel-disc"
-          [style.transform]="'rotate(' + currentRotation + 'deg)'"
-          [style.transition]="isSpinning ? 'transform ' + (spinDurationMs / 1000) + 's cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none'"
-        >
+        <g id="wheelDisc" class="wheel-disc" [style.transform]="'rotate(' + currentRotation + 'deg)'"
+          [style.transition]="isSpinning ? 'transform ' + (spinDurationMs / 1000) + 's cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none'">
           <!-- Sectores moldeados dinámicamente -->
           <g *ngFor="let slice of slices; let i = index" class="slice-group">
             <path [attr.d]="slice.pathD" [attr.fill]="slice.color" class="slice-path" />
 
             <!-- Texto del participante -->
             <g [attr.transform]="'rotate(' + (slice.midAngle - 90) + ' 250 250)'">
-              <text
-                x="375"
-                y="250"
-                text-anchor="middle"
-                dominant-baseline="central"
-                class="slice-text"
-                [style.font-size.px]="slice.fontSize"
-              >
+              <text x="375" y="250" text-anchor="middle" dominant-baseline="central" class="slice-text"
+                [style.font-size.px]="slice.fontSize">
                 {{ slice.name }}
               </text>
             </g>
@@ -66,19 +61,15 @@
 
           <!-- Remaches decorativos en cada división de sector -->
           <g *ngFor="let slice of slices">
-            <circle
-              cx="250"
-              cy="12"
-              r="3.5"
-              class="pin"
-              [attr.transform]="'rotate(' + slice.startAngle + ' 250 250)'"
-            />
+            <circle cx="250" cy="12" r="3.5" class="pin"
+              [attr.transform]="'rotate(' + slice.startAngle + ' 250 250)'" />
           </g>
         </g>
 
         <!-- Eje central decorativo y botón rápido -->
         <g class="center-hub-group" (click)="spin()" [class.disabled]="isSpinning">
-          <circle cx="250" cy="250" r="42" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4" filter="url(#pointer-shadow)" />
+          <circle cx="250" cy="250" r="42" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4"
+            filter="url(#pointer-shadow)" />
           <circle cx="250" cy="250" r="16" fill="#073B4C" />
           <text x="250" y="251" text-anchor="middle" dominant-baseline="central" class="hub-text">
             {{ isSpinning ? '...' : 'GIRAR' }}
@@ -90,11 +81,7 @@
 
   <!-- Botón de acción principal -->
   <div class="actions-wrapper">
-    <button
-      class="spin-btn"
-      (click)="spin()"
-      [disabled]="isSpinning || slices.length === 0"
-    >
+    <button class="spin-btn" (click)="spin()" [disabled]="isSpinning || slices.length === 0">
       <span class="btn-glow"></span>
       <span class="btn-content">
         <span *ngIf="!isSpinning">🎯 ¡GIRAR RULETA!</span>
@@ -120,8 +107,8 @@
       <!-- Botón para cerrar en la esquina -->
       <button class="modal-close-icon-btn" (click)="closeWinnerModal()" aria-label="Cerrar modal" title="Cerrar">
         <svg viewBox="0 0 24 24" class="close-icon-svg">
-          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
         </svg>
       </button>
 

@@ -6,29 +6,30 @@
       <span class="brand-title">Ruleta<span class="brand-highlight">App</span></span>
     </a>
 
-    <!-- Pestañas de Navegación Superior -->
-    <nav class="nav-links">
-      <a
-        routerLink="/ruleta"
-        routerLinkActive="active-tab"
-        class="nav-tab"
-      >
+    <!-- Pestañas de Navegación Superior (bloqueadas mientras carga) -->
+    <nav class="nav-links" [class.locked-nav]="participantsService.isLoading()">
+      <a routerLink="/ruleta" routerLinkActive="active-tab" class="nav-tab"
+        [class.disabled-tab]="participantsService.isLoading()"
+        [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ir a la ruleta'">
         <span class="tab-icon">🎯</span>
         <span class="tab-label">Ruleta</span>
       </a>
 
-      <a
-        routerLink="/ranking"
-        routerLinkActive="active-tab"
-        class="nav-tab"
-      >
+      <a routerLink="/ranking" routerLinkActive="active-tab" class="nav-tab"
+        [class.disabled-tab]="participantsService.isLoading()"
+        [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ver tabla de posiciones'">
         <span class="tab-icon">🏆</span>
         <span class="tab-label">Tabla de Posiciones</span>
         <span class="wins-badge" *ngIf="participantsService.totalWins() > 0">
           {{ participantsService.totalWins() }}
         </span>
       </a>
+
+      <!-- Indicador sutil de carga en el navbar -->
+      <span class="loading-nav-chip" *ngIf="participantsService.isLoading()">
+        <span class="pulse-mini-dot"></span>
+        <span class="chip-text">Sincronizando...</span>
+      </span>
     </nav>
   </div>
 </header>
-

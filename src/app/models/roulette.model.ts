@@ -1,12 +1,15 @@
 export interface Participant {
-  id: number;
+  id?: string | number;
+  _id?: string;
   name: string;
   wins: number;
   color?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WheelSlice {
-  id: number;
+  id: string | number;
   name: string;
   wins: number;
   color: string;
