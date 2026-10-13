@@ -13,10 +13,15 @@
       </p>
     </div>
 
-    <!-- Botón de Reinicio -->
-    <div class="header-actions" *ngIf="participantsService.totalWins() > 0">
-      <button class="reset-btn" (click)="resetScores()" title="Reiniciar contadores">
-        <span>🔄</span> Reiniciar Marcador
+    <!-- Acciones del Encabezado -->
+    <div class="header-actions">
+      <button class="sync-data-btn" (click)="participantsService.refreshFromApi()"
+        [disabled]="participantsService.isLoading()" title="Sincronizar del servidor">
+        <span>🔄</span> Sincronizar
+      </button>
+      <button class="reset-btn" *ngIf="participantsService.totalWins() > 0" (click)="resetScores()"
+        title="Reiniciar contadores">
+        <span>🗑️</span> Reiniciar Marcador
       </button>
     </div>
   </header>

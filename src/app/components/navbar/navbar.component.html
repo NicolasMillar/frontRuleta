@@ -6,30 +6,34 @@
       <span class="brand-title">Ruleta<span class="brand-highlight">App</span></span>
     </a>
 
-    <!-- Pestañas de Navegación Superior (bloqueadas mientras carga) -->
-    <nav class="nav-links" [class.locked-nav]="participantsService.isLoading()">
-      <a routerLink="/ruleta" routerLinkActive="active-tab" class="nav-tab"
-        [class.disabled-tab]="participantsService.isLoading()"
-        [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ir a la ruleta'">
-        <span class="tab-icon">🎯</span>
-        <span class="tab-label">Ruleta</span>
-      </a>
+    <!-- Acciones y Navegación Superior -->
+    <div class="navbar-actions">
+      <!-- Pestañas de Navegación -->
+      <nav class="nav-links" [class.locked-nav]="participantsService.isLoading()">
+        <a routerLink="/ruleta" routerLinkActive="active-tab" class="nav-tab"
+          [class.disabled-tab]="participantsService.isLoading()"
+          [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ir a la ruleta'">
+          <span class="tab-icon">🎯</span>
+          <span class="tab-label">Ruleta</span>
+        </a>
 
-      <a routerLink="/ranking" routerLinkActive="active-tab" class="nav-tab"
-        [class.disabled-tab]="participantsService.isLoading()"
-        [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ver tabla de posiciones'">
-        <span class="tab-icon">🏆</span>
-        <span class="tab-label">Tabla de Posiciones</span>
-        <span class="wins-badge" *ngIf="participantsService.totalWins() > 0">
-          {{ participantsService.totalWins() }}
-        </span>
-      </a>
+        <a routerLink="/ranking" routerLinkActive="active-tab" class="nav-tab"
+          [class.disabled-tab]="participantsService.isLoading()"
+          [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ver tabla de posiciones'">
+          <span class="tab-icon">🏆</span>
+          <span class="tab-label">Tabla de Posiciones</span>
+          <span class="wins-badge" *ngIf="participantsService.totalWins() > 0">
+            {{ participantsService.totalWins() }}
+          </span>
+        </a>
+      </nav>
 
-      <!-- Indicador sutil de carga en el navbar -->
-      <span class="loading-nav-chip" *ngIf="participantsService.isLoading()">
-        <span class="pulse-mini-dot"></span>
-        <span class="chip-text">Sincronizando...</span>
-      </span>
-    </nav>
+      <!-- Botón de Sincronizar / Actualizar datos desde el API -->
+      <button class="refresh-btn" (click)="participantsService.refreshFromApi()"
+        [disabled]="participantsService.isLoading()" title="Actualizar datos desde el servidor">
+        <span class="refresh-icon" [class.spinning]="participantsService.isLoading()">🔄</span>
+        <span class="refresh-text">{{ participantsService.isLoading() ? 'Cargando...' : 'Actualizar' }}</span>
+      </button>
+    </div>
   </div>
 </header>
