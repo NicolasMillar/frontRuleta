@@ -19,8 +19,8 @@
         [disabled]="participantsService.isLoading()" title="Sincronizar del servidor">
         <span>🔄</span> Sincronizar
       </button>
-      <button class="reset-btn" *ngIf="participantsService.totalWins() > 0" (click)="resetScores()"
-        title="Reiniciar contadores">
+      <button class="reset-btn" [disabled]="participantsService.isLoading()" (click)="resetScores()"
+        title="Reiniciar contadores e historial del servidor">
         <span>🗑️</span> Reiniciar Marcador
       </button>
     </div>

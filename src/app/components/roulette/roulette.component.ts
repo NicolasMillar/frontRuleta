@@ -1,7 +1,7 @@
 import { Component, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import confetti from 'canvas-confetti';
-import { Participant, WheelSlice } from '../../models/roulette.model';
+import { Participant, SpinResultStatus, WheelSlice } from '../../models/roulette.model';
 import { ParticipantsService } from '../../services/participants.service';
 import { LoadingComponent } from '../loading/loading.component';
 
@@ -24,8 +24,9 @@ export class RouletteComponent implements OnInit {
   currentRotation = 0;
   readonly spinDurationMs = 5000;
 
-  // Participante ganador
+  // Participante ganador y estado de validación diaria del servidor
   winner: Participant | null = null;
+  spinResultStatus: SpinResultStatus | null = null;
 
   // Parámetros de la ruleta SVG
   readonly center = 250;
@@ -172,6 +173,7 @@ export class RouletteComponent implements OnInit {
 
     this.isSpinning = true;
     this.winner = null;
+    this.spinResultStatus = null;
 
     // 1. Seleccionar ganador al azar entre los N participantes actuales
     const winnerIndex = Math.floor(Math.random() * this.slices.length);
@@ -196,14 +198,24 @@ export class RouletteComponent implements OnInit {
 
     this.currentRotation += delta;
 
-    // 3. Al concluir la animación CSS (5 segundos), actualizamos contador y anunciamos
+    // 3. Al concluir la animación CSS (5 segundos), validamos con el backend y mostramos resultado
     setTimeout(() => {
       this.isSpinning = false;
-      const winnerId = selectedWinner._id || selectedWinner.id || '';
-      const updatedWinner = this.participantsService.incrementWins(winnerId);
-      this.winner = updatedWinner || selectedWinner;
-      this.refreshWheel();
-      this.celebrate();
+      this.winner = selectedWinner;
+      this.spinResultStatus = {
+        loading: true,
+        isOfficialWin: false,
+        message: 'Validando resultado del día con el servidor...'
+      };
+
+      // Persistimos la victoria en el backend (POST /participants/win con { name })
+      this.participantsService.registerWin(selectedWinner.name, (status) => {
+        this.spinResultStatus = status;
+        this.refreshWheel();
+        if (status.isOfficialWin) {
+          this.celebrate();
+        }
+      });
     }, this.spinDurationMs);
   }
 
@@ -246,9 +258,21 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
+   * Retorna el color de un participante buscando por su nombre
+   */
+  public getParticipantColorByName(name?: string): string {
+    if (!name) return '#FFD166';
+    const slice = this.slices.find(
+      s => s.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    return slice?.color || '#FFD166';
+  }
+
+  /**
    * Cierra el modal del ganador
    */
   public closeWinnerModal(): void {
     this.winner = null;
+    this.spinResultStatus = null;
   }
 }

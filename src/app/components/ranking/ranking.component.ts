@@ -38,7 +38,7 @@ export class RankingComponent {
   }
 
   public resetScores(): void {
-    if (confirm('¿Estás seguro de que deseas reiniciar todos los contadores de victorias a 0?')) {
+    if (confirm('¿Estás seguro de que deseas limpiar el historial del día y reiniciar todos los contadores de victorias a 0 en el servidor?')) {
       this.participantsService.resetWins();
     }
   }

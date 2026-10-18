@@ -327,10 +327,81 @@
   margin-bottom: 1.25rem;
 }
 
+.winner-card.conflict-card {
+  border-color: #f78c6b;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(247, 140, 107, 0.25);
+}
+
+.winner-heading.conflict-heading {
+  color: #f78c6b;
+  margin-bottom: 0.75rem;
+}
+
+.extra-spin-label {
+  color: #cbd5e1;
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+}
+
+.extra-spin-label strong {
+  color: #ffffff;
+}
+
+.daily-conflict-box {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(247, 140, 107, 0.35);
+  border-radius: 16px;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.conflict-alert-text {
+  color: #fca5a5;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.official-daily-winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.official-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.official-winner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
+}
+
 .winner-subtext {
   color: #94a3b8;
   font-size: 1.05rem;
   margin: 0;
+}
+
+.winner-subtext.official-msg {
+  color: #6ee7b7;
+  font-weight: 600;
 }
 
 @keyframes fadeIn {

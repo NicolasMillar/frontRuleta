@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Participant } from '../models/roulette.model';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Participant, SpinResultStatus, WinConflictError, WinSuccessResponse } from '../models/roulette.model';
 import defaultParticipants from '../data/participants.json';
 import { environment } from '../../environments/environment';
 
@@ -81,15 +81,18 @@ export class ParticipantsService {
   /**
    * Obtiene la lista de participantes desde el backend (Render).
    * @param force Si es true, ignora el caché y fuerza la llamada al API.
+   * @param silent Si es true, actualiza los datos en segundo plano sin mostrar la pantalla de carga.
    */
-  public fetchParticipants(force = false): void {
+  public fetchParticipants(force = false, silent = false): void {
     // Si no es forzado y ya tenemos datos en memoria, evitamos la llamada HTTP
     if (!force && this.participantsSignal().length > 0) {
       this.isLoading.set(false);
       return;
     }
 
-    this.isLoading.set(true);
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.errorMessage.set(null);
 
     this.http.get<Participant[]>(`${environment.apiUrl}/participants/`).subscribe({
@@ -123,7 +126,14 @@ export class ParticipantsService {
    * Forzar recarga desde el API (usado por el botón de refresh)
    */
   public refreshFromApi(): void {
-    this.fetchParticipants(true);
+    this.fetchParticipants(true, false);
+  }
+
+  /**
+   * Sincroniza silenciosamente en segundo plano con el servidor
+   */
+  public syncSilentFromApi(): void {
+    this.fetchParticipants(true, true);
   }
 
   /**
@@ -140,15 +150,69 @@ export class ParticipantsService {
   }
 
   /**
-   * Incrementa en 1 las victorias del participante ganador y actualiza caché
+   * Registra una victoria en el backend (POST /participants/win).
+   * Maneja tanto el caso exitoso (200 OK) como el conflicto de ganador diario ya existente (409 Conflict).
    */
-  public incrementWins(id: string | number): Participant | undefined {
+  public registerWin(name: string, onComplete?: (status: SpinResultStatus) => void): void {
+    const url = `${environment.apiUrl}/participants/win`;
+
+    this.http.post<WinSuccessResponse>(url, { name }).subscribe({
+      next: (response) => {
+        console.log(`Victoria para "${name}" guardada en el backend:`, response);
+        if (response?.participant?.wins !== undefined) {
+          this.syncWinsFromServer(name, response.participant.wins);
+        } else {
+          this.incrementWinsByName(name);
+        }
+
+        if (onComplete) {
+          onComplete({
+            loading: false,
+            isOfficialWin: true,
+            message: response?.message || '¡Victoria oficial del día registrada exitosamente!'
+          });
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 409) {
+          const conflictBody = err.error as WinConflictError;
+          console.warn('Ya existe un ganador hoy:', conflictBody);
+
+          // Sincronizamos silenciosamente las victorias reales del servidor
+          this.syncSilentFromApi();
+
+          if (onComplete) {
+            onComplete({
+              loading: false,
+              isOfficialWin: false,
+              message: conflictBody?.error || 'Ya existe un ganador registrado para el día de hoy',
+              dailyWinnerName: conflictBody?.winner?.name,
+              dailyWinnerDate: conflictBody?.winner?.date
+            });
+          }
+        } else {
+          console.error(`Error al persistir la victoria de "${name}" en el backend:`, err);
+          if (onComplete) {
+            onComplete({
+              loading: false,
+              isOfficialWin: false,
+              message: 'No se pudo conectar con el servidor para validar la victoria del día.'
+            });
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Incrementa las victorias buscando por nombre
+   */
+  public incrementWinsByName(name: string): Participant | undefined {
     let winnerUpdated: Participant | undefined;
 
     this.participantsSignal.update(currentList => {
       const updatedList = currentList.map(participant => {
-        const participantId = participant._id || participant.id;
-        if (participantId === id || String(participantId) === String(id)) {
+        if (participant.name.trim().toLowerCase() === name.trim().toLowerCase()) {
           const updated = {
             ...participant,
             wins: (participant.wins || 0) + 1
@@ -166,13 +230,45 @@ export class ParticipantsService {
   }
 
   /**
-   * Reinicia todos los contadores de victorias a 0 y actualiza caché
+   * Sincroniza el contador exacto devuelto por el servidor
+   */
+  private syncWinsFromServer(name: string, exactWins: number): void {
+    this.participantsSignal.update(currentList => {
+      const updatedList = currentList.map(participant => {
+        if (participant.name.trim().toLowerCase() === name.trim().toLowerCase()) {
+          return {
+            ...participant,
+            wins: exactWins
+          };
+        }
+        return participant;
+      });
+      this.saveToCache(updatedList);
+      return updatedList;
+    });
+  }
+
+  /**
+   * Reinicia todos los contadores de victorias a 0 y limpia el historial diario en el backend (POST /participants/reset)
    */
   public resetWins(): void {
-    this.participantsSignal.update(currentList => {
-      const updated = currentList.map(p => ({ ...p, wins: 0 }));
-      this.saveToCache(updated);
-      return updated;
+    this.isLoading.set(true);
+    const url = `${environment.apiUrl}/participants/reset`;
+
+    this.http.post<{ message: string }>(url, {}).subscribe({
+      next: (res) => {
+        console.log('Historial reiniciado en el servidor:', res);
+        this.participantsSignal.update(currentList => {
+          const updated = currentList.map(p => ({ ...p, wins: 0 }));
+          this.saveToCache(updated);
+          return updated;
+        });
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error al reiniciar historial en el servidor:', err);
+        this.isLoading.set(false);
+      }
     });
   }
 }

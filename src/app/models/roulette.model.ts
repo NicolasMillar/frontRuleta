@@ -21,3 +21,29 @@ export interface WheelSlice {
   textRadius: number;
   fontSize: number;
 }
+
+export interface WinSuccessResponse {
+  message: string;
+  participant: Participant;
+}
+
+export interface DailyWinnerRecord {
+  _id: string;
+  name: string;
+  date: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WinConflictError {
+  error: string;
+  winner: DailyWinnerRecord;
+}
+
+export interface SpinResultStatus {
+  loading: boolean;
+  isOfficialWin: boolean;
+  message: string;
+  dailyWinnerName?: string;
+  dailyWinnerDate?: string;
+}
