@@ -34,18 +34,23 @@ export class ParticipantsService {
   }
 
   /**
-   * Inicializa participantes revisando primero el caché local.
-   * Si hay caché, no consume el API; si está vacío, hace la petición inicial.
+   * Inicializa participantes aplicando el patrón Stale-While-Revalidate:
+   * - Si hay caché local, lo muestra al instante (0 ms, sin pantalla de carga)
+   *   y lanza una sincronización silenciosa en segundo plano para traer cambios recientes.
+   * - Si no hay caché previo, muestra la pantalla de carga hasta que el API responda.
    */
   private initParticipants(): void {
     const cached = this.getCachedParticipants();
     if (cached && cached.length > 0) {
-      // Usamos el caché en memoria inmediatamente (0 ms de espera)
+      // 1. Usamos el caché en memoria inmediatamente (0 ms de espera)
       this.participantsSignal.set(cached);
       this.isLoading.set(false);
+
+      // 2. Sincronizamos en segundo plano sin bloquear la pantalla
+      this.syncSilentFromApi();
     } else {
-      // Primera vez o sin caché previo: consultamos el API
-      this.fetchParticipants(true);
+      // Primera vez sin caché previo: consultamos el API mostrando el loader
+      this.fetchParticipants(true, false);
     }
   }
 
