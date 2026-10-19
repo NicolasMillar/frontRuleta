@@ -25,6 +25,15 @@ export class RankingComponent {
     '#118AB2', '#073B4C', '#8338EC', '#3A86FF'
   ];
 
+  /**
+   * El botón de reinicio solo está habilitado el 1 de enero (día 1 del mes 0),
+   * independientemente del año.
+   */
+  public get isNewYearDay(): boolean {
+    const today = new Date();
+    return today.getMonth() === 0 && today.getDate() === 1;
+  }
+
   constructor(public participantsService: ParticipantsService) { }
 
   public getParticipantColor(index: number, participant: Participant): string {
@@ -38,6 +47,8 @@ export class RankingComponent {
   }
 
   public resetScores(): void {
+    if (!this.isNewYearDay) return;
+
     if (confirm('¿Estás seguro de que deseas limpiar el historial del día y reiniciar todos los contadores de victorias a 0 en el servidor?')) {
       this.participantsService.resetWins();
     }

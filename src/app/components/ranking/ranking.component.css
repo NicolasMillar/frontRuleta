@@ -78,6 +78,12 @@
   cursor: not-allowed;
 }
 
+.reset-btn-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .reset-btn {
   background: rgba(239, 71, 111, 0.15);
   border: 1px solid rgba(239, 71, 111, 0.4);
@@ -93,10 +99,54 @@
   transition: all 0.2s ease;
 }
 
-.reset-btn:hover {
+.reset-btn:hover:not(:disabled) {
   background: rgba(239, 71, 111, 0.3);
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+.reset-btn:disabled {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Tooltip flotante al pasar el mouse sobre el botón bloqueado */
+.reset-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 20;
+}
+
+.reset-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 24px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(255, 209, 102, 0.4) transparent transparent transparent;
+}
+
+.reset-btn-wrapper:hover .reset-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Tarjeta y Tabla */

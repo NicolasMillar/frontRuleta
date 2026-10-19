@@ -6,7 +6,7 @@
   <!-- Encabezado de la Sección -->
   <header class="ranking-header">
     <div class="header-titles">
-      <h1 class="title">Tabla de Victorias</h1>
+      <h1 class="title">Contador de Wekitos</h1>
       <p class="subtitle">
         Total de giros registrados:
         <span class="highlight-total">{{ participantsService.totalWins() }}</span>
@@ -19,10 +19,17 @@
         [disabled]="participantsService.isLoading()" title="Sincronizar del servidor">
         <span>🔄</span> Sincronizar
       </button>
-      <button class="reset-btn" [disabled]="participantsService.isLoading()" (click)="resetScores()"
-        title="Reiniciar contadores e historial del servidor">
-        <span>🗑️</span> Reiniciar Marcador
-      </button>
+
+      <!-- Contenedor con tooltip para mostrar por qué está inactivo fuera del 1 de enero -->
+      <div class="reset-btn-wrapper"
+        [attr.title]="!isNewYearDay ? 'Este botón solo se habilita el 1 de enero de cada año' : 'Reiniciar contadores e historial del servidor'">
+        <button class="reset-btn" [disabled]="participantsService.isLoading() || !isNewYearDay" (click)="resetScores()">
+          <span>{{ isNewYearDay ? '🗑️' : '🔒' }}</span> Reiniciar Marcador
+        </button>
+        <span class="reset-tooltip" *ngIf="!isNewYearDay">
+          🔒 Bloqueado: solo disponible el 1 de enero de cada año
+        </span>
+      </div>
     </div>
   </header>
 
