@@ -1,0 +1,133 @@
+.loading-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(85vh - 70px);
+  padding: 2rem 1rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.loading-card {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spinner-container {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Spinner Arco / Media luna minimalista */
+.spinner-arc {
+  width: 52px;
+  height: 52px;
+  border: 6px solid transparent;
+  border-left-color: #ffd166;
+  border-radius: 50%;
+  animation: rotateSpin 0.75s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.5));
+}
+
+@keyframes rotateSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Textos y Barra */
+.loading-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.loading-subtitle {
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+/* Barra de progreso indeterminada */
+.indeterminate-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.progress-bar-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #ef476f 0%, #f78c6b 50%, #ffd166 100%);
+  border-radius: 9999px;
+  animation: indeterminateProgress 1.6s ease-in-out infinite;
+}
+
+@keyframes indeterminateProgress {
+  0% {
+    left: -40%;
+    width: 40%;
+  }
+
+  50% {
+    left: 20%;
+    width: 60%;
+  }
+
+  100% {
+    left: 100%;
+    width: 40%;
+  }
+}
+
+.render-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hint-icon {
+  color: #ffd166;
+  font-size: 0.95rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
