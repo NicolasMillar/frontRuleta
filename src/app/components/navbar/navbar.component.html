@@ -26,6 +26,13 @@
             {{ participantsService.totalWins() }}
           </span>
         </a>
+
+        <a routerLink="/historial" routerLinkActive="active-tab" class="nav-tab"
+          [class.disabled-tab]="participantsService.isLoading()"
+          [attr.title]="participantsService.isLoading() ? 'Cargando datos...' : 'Ver calendario y carrera de historial'">
+          <span class="tab-icon">📅</span>
+          <span class="tab-label">Historial</span>
+        </a>
       </nav>
 
       <!-- Botón de Sincronizar / Actualizar datos desde el API -->

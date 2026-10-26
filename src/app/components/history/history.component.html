@@ -1,0 +1,216 @@
+<!-- Pantalla de carga si aún se están trayendo datos iniciales -->
+<app-loading *ngIf="participantsService.isLoading() || (participantsService.isHistoryLoading() && participantsService.history().length === 0)"
+  message="Cargando Historial..." subMessage="Obteniendo calendario y carrera de ganadores..." />
+
+<div class="history-container" *ngIf="!participantsService.isLoading()">
+  <!-- SECCIÓN 1: CALENDARIO DE GANADORES DIARIOS -->
+  <section class="calendar-section">
+    <header class="section-header">
+      <div>
+        <h1 class="title">Calendario de Venekos</h1>
+        <p class="subtitle">
+          Días con Veneko registrado:
+          <span class="highlight-total">{{ participantsService.history().length }}</span>
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="action-btn scroll-btn" (click)="scrollToRace()">
+          <span>🏁</span> Ver Gráfico de Carrera ↓
+        </button>
+        <button class="action-btn sync-btn" (click)="participantsService.refreshFromApi()"
+          [disabled]="participantsService.isHistoryLoading()">
+          <span>🔄</span> Sincronizar
+        </button>
+      </div>
+    </header>
+
+    <!-- Leyenda de Colores por Participante en este Mes -->
+    <div class="legend-bar">
+      <div class="legend-chip" *ngFor="let item of monthLegend()" [class.active-winner]="item.monthWins > 0">
+        <span class="legend-dot" [style.background-color]="item.color"></span>
+        <span class="legend-name">{{ item.name }}</span>
+        <span class="legend-count" *ngIf="item.monthWins > 0">{{ item.monthWins }}</span>
+      </div>
+    </div>
+
+    <!-- Tarjeta del Calendario -->
+    <div class="card calendar-card">
+      <div class="calendar-toolbar">
+        <button class="month-nav-btn" (click)="prevMonth()" title="Mes anterior">◀ Anterior</button>
+        <div class="month-title-group">
+          <h2 class="month-title">{{ currentMonthLabel() }}</h2>
+          <button class="today-pill" (click)="goToCurrentMonth()">Ir a Hoy</button>
+        </div>
+        <button class="month-nav-btn" (click)="nextMonth()" title="Mes siguiente">Siguiente ▶</button>
+      </div>
+
+      <!-- Cabecera de días de la semana -->
+      <div class="calendar-grid weekdays-header">
+        <div class="weekday-cell" *ngFor="let wd of weekDays">{{ wd }}</div>
+      </div>
+
+      <!-- Cuadrícula de días -->
+      <div class="calendar-grid days-grid">
+        <div class="day-cell" *ngFor="let cell of calendarCells()"
+          [class.empty-cell]="cell.dayNumber === null"
+          [class.today-cell]="cell.isToday"
+          [class.has-winner]="!!cell.winnerName"
+          [style.background]="cell.winnerBg || ''"
+          [style.border-color]="cell.winnerColor || ''">
+
+          <ng-container *ngIf="cell.dayNumber !== null">
+            <div class="day-top">
+              <span class="day-number">{{ cell.dayNumber }}</span>
+              <span class="today-tag" *ngIf="cell.isToday">HOY</span>
+            </div>
+
+            <!-- Ganador del día -->
+            <div class="day-winner" *ngIf="cell.winnerName">
+              <span class="winner-avatar" [style.background-color]="cell.winnerColor">
+                {{ cell.winnerName.charAt(0).toUpperCase() }}
+              </span>
+              <span class="winner-label">{{ cell.winnerName }}</span>
+            </div>
+
+            <!-- Sin giro registrado -->
+            <div class="day-empty-label" *ngIf="!cell.winnerName">
+              <span>—</span>
+            </div>
+
+            <!-- Tooltip flotante al pasar el mouse -->
+            <div class="day-tooltip" *ngIf="cell.winnerName">
+              📅 {{ cell.formattedDate }} — 🏆 <strong>{{ cell.winnerName }}</strong>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Divisor de desplazamiento hacia el gráfico -->
+  <div class="scroll-divider" (click)="scrollToRace()">
+    <span>↓ Desliza hacia abajo para ver la Carrera de Venekos ↓</span>
+  </div>
+
+  <!-- SECCIÓN 2: GRÁFICO DE TIPO CARRERA (ACUMULADO POR FECHA) -->
+  <section id="race-chart-section" class="race-section">
+    <header class="section-header">
+      <div>
+        <h2 class="title">🏁 Carrera de Venekos</h2>
+        <p class="subtitle">
+          Evolución acumulada día a día según el historial oficial
+        </p>
+      </div>
+
+      <div class="header-actions" *ngIf="raceSteps().length > 0">
+        <button class="action-btn play-race-btn" (click)="togglePlayRace()">
+          <span>{{ isPlayingRace() ? '⏸️' : '▶️' }}</span>
+          {{ isPlayingRace() ? 'Pausar Carrera' : 'Simular Carrera' }}
+        </button>
+        <button class="action-btn sync-btn" *ngIf="activeStepIndex() !== null" (click)="selectStep(null)">
+          ⏮️ Ver Final
+        </button>
+      </div>
+    </header>
+
+    <!-- Selector de fechas / Línea de tiempo interactiva -->
+    <div class="timeline-pills" *ngIf="raceSteps().length > 0">
+      <button class="step-pill" [class.active-pill]="activeStepIndex() === null" (click)="selectStep(null)">
+        🏆 Actual ({{ raceSteps().length }} {{ raceSteps().length === 1 ? 'día' : 'días' }})
+      </button>
+      <button class="step-pill" *ngFor="let step of raceSteps(); let idx = index"
+        [class.active-pill]="activeStepIndex() === idx" (click)="selectStep(idx)">
+        📅 {{ step.label }}: {{ step.winnerName }}
+      </button>
+    </div>
+
+    <!-- Sub-sección 2A: Pista de Barras en Carrera (Bar Chart Race) -->
+    <div class="card race-card">
+      <div class="card-subtitle-row">
+        <h3 class="card-heading">🏎️ Posiciones en Carrera</h3>
+        <span class="step-indicator" *ngIf="currentRaceStep() as step">
+          Último punto sumado: <strong>{{ step.winnerName }}</strong> ({{ step.label }})
+        </span>
+      </div>
+
+      <div class="race-lanes">
+        <div class="race-lane" *ngFor="let item of raceBars(); let i = index"
+          [class.winner-pulse]="item.isStepWinner">
+          <div class="lane-info">
+            <span class="lane-rank">{{ i === 0 && item.wins > 0 ? '🥇' : '#' + (i + 1) }}</span>
+            <span class="lane-avatar" [style.background-color]="item.color">
+              {{ item.name.charAt(0).toUpperCase() }}
+            </span>
+            <span class="lane-name">{{ item.name }}</span>
+          </div>
+
+          <div class="lane-track">
+            <div class="lane-bar" [style.width.%]="item.percentage" [style.background-color]="item.color">
+              <span class="racer-icon" *ngIf="item.wins > 0">🏎️</span>
+            </div>
+          </div>
+
+          <div class="lane-score">
+            <strong>{{ item.wins }}</strong> {{ item.wins === 1 ? 'vez' : 'veces' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-sección 2B: Gráfico SVG de Líneas de Carrera Acumulada -->
+    <div class="card line-chart-card">
+      <div class="card-subtitle-row">
+        <h3 class="card-heading">📈 Curva de Evolución por Fecha</h3>
+        <span class="chart-hint">Cada subida representa el día en que ganó el participante</span>
+      </div>
+
+      <div class="svg-chart-wrapper" *ngIf="raceChartData() as chart">
+        <svg [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight" class="race-svg">
+          <!-- Líneas guía horizontales (Eje Y) -->
+          <g *ngFor="let tick of chart.yTicks">
+            <line [attr.x1]="padLeft" [attr.y1]="tick.y" [attr.x2]="svgWidth - padRight" [attr.y2]="tick.y"
+              class="grid-line" />
+            <text [attr.x]="padLeft - 12" [attr.y]="tick.y + 4" class="axis-label y-label">
+              {{ tick.value }}
+            </text>
+          </g>
+
+          <!-- Etiquetas de fechas (Eje X) -->
+          <g *ngFor="let xl of chart.xLabels">
+            <line [attr.x1]="xl.x" [attr.y1]="padTop" [attr.x2]="xl.x" [attr.y2]="svgHeight - padBottom"
+              class="grid-line-vertical" />
+            <text [attr.x]="xl.x" [attr.y]="svgHeight - 14" class="axis-label x-label">
+              {{ xl.label }}
+            </text>
+          </g>
+
+          <!-- Series de líneas de cada participante -->
+          <g *ngFor="let s of chart.series">
+            <polyline [attr.points]="s.points" fill="none" [attr.stroke]="s.color" stroke-width="3.5"
+              stroke-linecap="round" stroke-linejoin="round" class="race-polyline" />
+
+            <!-- Puntos en cada fecha -->
+            <circle *ngFor="let d of s.dots" [attr.cx]="d.x" [attr.cy]="d.y"
+              [attr.r]="d.wonThisDay ? 6 : 4" [attr.fill]="s.color" stroke="#0f172a" stroke-width="2">
+              <title>{{ s.name }} — {{ d.dateLabel }}: {{ d.value }} victoria(s)</title>
+            </circle>
+
+            <!-- Etiqueta con el nombre al final de la línea -->
+            <text [attr.x]="s.lastX + 10" [attr.y]="s.lastY + 4" [attr.fill]="s.color" class="series-end-label">
+              {{ s.name }} ({{ s.totalWins }})
+            </text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Botón de retorno rápido a la ruleta -->
+  <div class="footer-cta">
+    <a routerLink="/ruleta" class="play-btn">
+      <span>🎯</span> Volver a la Ruleta
+    </a>
+  </div>
+</div>
+

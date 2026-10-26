@@ -19,12 +19,6 @@ export class RankingComponent {
     return list.sort((a, b) => (b.wins || 0) - (a.wins || 0));
   });
 
-  // Paleta de colores para los avatares
-  readonly palette: string[] = [
-    '#EF476F', '#F78C6B', '#FFD166', '#06D6A0',
-    '#118AB2', '#073B4C', '#8338EC', '#3A86FF'
-  ];
-
   /**
    * El botón de reinicio solo está habilitado el 1 de enero (día 1 del mes 0),
    * independientemente del año.
@@ -36,8 +30,8 @@ export class RankingComponent {
 
   constructor(public participantsService: ParticipantsService) { }
 
-  public getParticipantColor(index: number, participant: Participant): string {
-    return participant.color || this.palette[index % this.palette.length];
+  public getParticipantColor(_index: number, participant: Participant): string {
+    return participant.color || this.participantsService.getColorForParticipantName(participant.name);
   }
 
   public getWinPercentage(wins: number): number {
