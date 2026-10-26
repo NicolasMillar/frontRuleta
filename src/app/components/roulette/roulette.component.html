@@ -127,7 +127,7 @@
       <!-- Estado 2: Victoria Oficial del Día (200 OK) -->
       <ng-container *ngIf="spinResultStatus && !spinResultStatus.loading && spinResultStatus.isOfficialWin">
         <div class="trophy-icon">🏆</div>
-        <h2 class="winner-heading">¡TENEMOS UN GANADOR!</h2>
+        <h2 class="winner-heading">¡TENEMOS UN PERDEDOR!</h2>
         <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
           {{ winner.name }}
         </div>
@@ -149,7 +149,7 @@
             ⚠️ {{ spinResultStatus.message }}
           </p>
           <div class="official-daily-winner" *ngIf="spinResultStatus.dailyWinnerName">
-            <span class="official-label">Ganador oficial de hoy:</span>
+            <span class="official-label">Perdedor oficial de hoy:</span>
             <span class="official-winner-pill"
               [style.background-color]="getParticipantColorByName(spinResultStatus.dailyWinnerName)">
               🏆 {{ spinResultStatus.dailyWinnerName }}
