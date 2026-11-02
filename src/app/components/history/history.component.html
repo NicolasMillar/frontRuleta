@@ -1,9 +1,10 @@
 <!-- Pantalla de carga si aún se están trayendo datos iniciales -->
-<app-loading *ngIf="participantsService.isLoading() || (participantsService.isHistoryLoading() && participantsService.history().length === 0)"
-  message="Cargando Historial..." subMessage="Obteniendo calendario y carrera de ganadores..." />
+<app-loading
+  *ngIf="participantsService.isLoading() || (participantsService.isHistoryLoading() && participantsService.history().length === 0)"
+  message="Cargando Historial..." subMessage="Obteniendo calendario y carrera de Venekos..." />
 
 <div class="history-container" *ngIf="!participantsService.isLoading()">
-  <!-- SECCIÓN 1: CALENDARIO DE GANADORES DIARIOS -->
+  <!-- SECCIÓN 1: CALENDARIO DE Venekos DIARIOS -->
   <section class="calendar-section">
     <header class="section-header">
       <div>
@@ -52,12 +53,9 @@
 
       <!-- Cuadrícula de días -->
       <div class="calendar-grid days-grid">
-        <div class="day-cell" *ngFor="let cell of calendarCells()"
-          [class.empty-cell]="cell.dayNumber === null"
-          [class.today-cell]="cell.isToday"
-          [class.has-winner]="!!cell.winnerName"
-          [style.background]="cell.winnerBg || ''"
-          [style.border-color]="cell.winnerColor || ''">
+        <div class="day-cell" *ngFor="let cell of calendarCells()" [class.empty-cell]="cell.dayNumber === null"
+          [class.today-cell]="cell.isToday" [class.has-winner]="!!cell.winnerName"
+          [style.background]="cell.winnerBg || ''" [style.border-color]="cell.winnerColor || ''">
 
           <ng-container *ngIf="cell.dayNumber !== null">
             <div class="day-top">
@@ -65,7 +63,7 @@
               <span class="today-tag" *ngIf="cell.isToday">HOY</span>
             </div>
 
-            <!-- Ganador del día -->
+            <!-- Veneko del día -->
             <div class="day-winner" *ngIf="cell.winnerName">
               <span class="winner-avatar" [style.background-color]="cell.winnerColor">
                 {{ cell.winnerName.charAt(0).toUpperCase() }}
@@ -90,16 +88,16 @@
 
   <!-- Divisor de desplazamiento hacia el gráfico -->
   <div class="scroll-divider" (click)="scrollToRace()">
-    <span>↓ Desliza hacia abajo para ver la Carrera de Venekos ↓</span>
+    <span>↓ Desliza hacia abajo para ver la Carrera de Venekos (Semanal / Mensual) ↓</span>
   </div>
 
-  <!-- SECCIÓN 2: GRÁFICO DE TIPO CARRERA (ACUMULADO POR FECHA) -->
+  <!-- SECCIÓN 2: GRÁFICO DE TIPO CARRERA (CON FILTROS SEMANA / MES / HISTÓRICO) -->
   <section id="race-chart-section" class="race-section">
     <header class="section-header">
       <div>
         <h2 class="title">🏁 Carrera de Venekos</h2>
         <p class="subtitle">
-          Evolución acumulada día a día según el historial oficial
+          Todos parten desde 0 al inicio del período seleccionado (sin arrastrar ventaja anterior)
         </p>
       </div>
 
@@ -114,10 +112,67 @@
       </div>
     </header>
 
-    <!-- Selector de fechas / Línea de tiempo interactiva -->
+    <!-- Selector fijo de Período: Semana / Mes / Histórico -->
+    <div class="filter-bar">
+      <div class="mode-tabs">
+        <button class="mode-tab" [class.active-mode]="raceFilter() === 'week'" (click)="setRaceFilter('week')">
+          ⚡ Semana
+        </button>
+        <button class="mode-tab" [class.active-mode]="raceFilter() === 'month'" (click)="setRaceFilter('month')">
+          🗓️ Mes ({{ currentMonthLabel() }})
+        </button>
+        <button class="mode-tab" [class.active-mode]="raceFilter() === 'all'" (click)="setRaceFilter('all')">
+          🌍 Histórico Total
+        </button>
+      </div>
+
+      <!-- Controles de navegación del sub-período (Semana o Mes) -->
+      <div class="period-subnav" *ngIf="raceFilter() === 'week'">
+        <button class="month-nav-btn" (click)="changeWeek(-1)">◀ Semana ant.</button>
+        <span class="period-range-badge">{{ activeWeekRange().label }}</span>
+        <button class="today-pill" *ngIf="weekOffset() !== 0" (click)="resetToCurrentWeek()">Semana actual</button>
+        <button class="month-nav-btn" [disabled]="weekOffset() >= 0" (click)="changeWeek(1)">Semana sig. ▶</button>
+      </div>
+
+      <div class="period-subnav" *ngIf="raceFilter() === 'month'">
+        <button class="month-nav-btn" (click)="prevMonth()">◀ Mes ant.</button>
+        <span class="period-range-badge">{{ currentMonthLabel() }}</span>
+        <button class="month-nav-btn" (click)="nextMonth()">Mes sig. ▶</button>
+      </div>
+    </div>
+
+    <!-- Tarjeta Resumen de Recompensa (Líder o Empate del Período) -->
+    <div class="reward-banner" *ngIf="periodRewardSummary() as summary" [class.tie-banner]="summary.isTie">
+      <div class="reward-info">
+        <span class="reward-tag">🎁 {{ summary.periodTitle }} · {{ summary.rangeSubtitle }}</span>
+        <div class="reward-headline" *ngIf="summary.hasWins && !summary.isTie">
+          🏆 Líder actual:
+          <span class="leader-chip" *ngFor="let l of summary.leaders">
+            <span class="legend-dot" [style.background-color]="l.color"></span>
+            <strong>{{ l.name }}</strong>
+          </span>
+          con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'victoria' : 'Venekos'
+            }}</span> en este período
+        </div>
+        <div class="reward-headline" *ngIf="summary.hasWins && summary.isTie">
+          🔥 ¡Empate en el 1º lugar!
+          <span class="leader-chip" *ngFor="let l of summary.leaders">
+            <span class="legend-dot" [style.background-color]="l.color"></span>
+            <strong>{{ l.name }}</strong>
+          </span>
+          empatados con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'victoria' :
+            'Venekos' }}</span>
+        </div>
+        <div class="reward-headline empty-reward" *ngIf="!summary.hasWins">
+          ⏳ Aún no hay Venekos registradas en este período ({{ summary.rangeSubtitle }}). Todos parten en 0.
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector de fechas / Línea de tiempo interactiva del período -->
     <div class="timeline-pills" *ngIf="raceSteps().length > 0">
       <button class="step-pill" [class.active-pill]="activeStepIndex() === null" (click)="selectStep(null)">
-        🏆 Actual ({{ raceSteps().length }} {{ raceSteps().length === 1 ? 'día' : 'días' }})
+        🏆 Total Período ({{ raceSteps().length }} {{ raceSteps().length === 1 ? 'día' : 'días' }})
       </button>
       <button class="step-pill" *ngFor="let step of raceSteps(); let idx = index"
         [class.active-pill]="activeStepIndex() === idx" (click)="selectStep(idx)">
@@ -128,15 +183,14 @@
     <!-- Sub-sección 2A: Pista de Barras en Carrera (Bar Chart Race) -->
     <div class="card race-card">
       <div class="card-subtitle-row">
-        <h3 class="card-heading">🏎️ Posiciones en Carrera</h3>
+        <h3 class="card-heading">🏎️ Posiciones en Carrera ({{ periodRewardSummary().rangeSubtitle }})</h3>
         <span class="step-indicator" *ngIf="currentRaceStep() as step">
           Último punto sumado: <strong>{{ step.winnerName }}</strong> ({{ step.label }})
         </span>
       </div>
 
       <div class="race-lanes">
-        <div class="race-lane" *ngFor="let item of raceBars(); let i = index"
-          [class.winner-pulse]="item.isStepWinner">
+        <div class="race-lane" *ngFor="let item of raceBars(); let i = index" [class.winner-pulse]="item.isStepWinner">
           <div class="lane-info">
             <span class="lane-rank">{{ i === 0 && item.wins > 0 ? '🥇' : '#' + (i + 1) }}</span>
             <span class="lane-avatar" [style.background-color]="item.color">
@@ -161,8 +215,8 @@
     <!-- Sub-sección 2B: Gráfico SVG de Líneas de Carrera Acumulada -->
     <div class="card line-chart-card">
       <div class="card-subtitle-row">
-        <h3 class="card-heading">📈 Curva de Evolución por Fecha</h3>
-        <span class="chart-hint">Cada subida representa el día en que ganó el participante</span>
+        <h3 class="card-heading">📈 Curva de Evolución ({{ periodRewardSummary().rangeSubtitle }})</h3>
+        <span class="chart-hint">Todos inician en 0 al comenzar el período</span>
       </div>
 
       <div class="svg-chart-wrapper" *ngIf="raceChartData() as chart">
@@ -191,8 +245,8 @@
               stroke-linecap="round" stroke-linejoin="round" class="race-polyline" />
 
             <!-- Puntos en cada fecha -->
-            <circle *ngFor="let d of s.dots" [attr.cx]="d.x" [attr.cy]="d.y"
-              [attr.r]="d.wonThisDay ? 6 : 4" [attr.fill]="s.color" stroke="#0f172a" stroke-width="2">
+            <circle *ngFor="let d of s.dots" [attr.cx]="d.x" [attr.cy]="d.y" [attr.r]="d.wonThisDay ? 6 : 4"
+              [attr.fill]="s.color" stroke="#0f172a" stroke-width="2">
               <title>{{ s.name }} — {{ d.dateLabel }}: {{ d.value }} victoria(s)</title>
             </circle>
 
@@ -213,4 +267,3 @@
     </a>
   </div>
 </div>
-

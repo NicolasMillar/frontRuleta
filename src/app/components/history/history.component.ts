@@ -5,6 +5,8 @@ import { ParticipantsService } from '../../services/participants.service';
 import { DailyWinnerRecord } from '../../models/roulette.model';
 import { LoadingComponent } from '../loading/loading.component';
 
+export type RaceFilterMode = 'week' | 'month' | 'all';
+
 export interface CalendarDayCell {
   dayNumber: number | null;
   dateKey: string;
@@ -40,6 +42,15 @@ export interface RaceLineSeries {
   totalWins: number;
 }
 
+export interface PeriodRewardSummary {
+  periodTitle: string;
+  rangeSubtitle: string;
+  hasWins: boolean;
+  isTie: boolean;
+  maxWins: number;
+  leaders: { name: string; color: string }[];
+}
+
 @Component({
   selector: 'app-history',
   standalone: true,
@@ -54,11 +65,17 @@ export class HistoryComponent implements OnDestroy {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  // Mes y año seleccionados en el calendario
+  // Mes y año seleccionados en el calendario (y usados en el modo 'month')
   readonly viewYear = signal<number>(new Date().getFullYear());
   readonly viewMonth = signal<number>(new Date().getMonth());
 
-  // Control de reproducción del gráfico de carrera (null = mostrar estado final completo)
+  // Filtro fijo para la carrera: 'week' (Semana), 'month' (Mes), 'all' (Histórico)
+  readonly raceFilter = signal<RaceFilterMode>('week');
+
+  // Desplazamiento de semanas para revisar la semana actual (0) o semanas anteriores (-1, -2...)
+  readonly weekOffset = signal<number>(0);
+
+  // Control de reproducción del gráfico de carrera (null = mostrar estado final del período)
   readonly activeStepIndex = signal<number | null>(null);
   readonly isPlayingRace = signal<boolean>(false);
   private raceTimer: ReturnType<typeof setInterval> | null = null;
@@ -78,6 +95,23 @@ export class HistoryComponent implements OnDestroy {
   // Etiqueta del mes actual en vista
   readonly currentMonthLabel = computed(() => {
     return `${this.monthNames[this.viewMonth()]} ${this.viewYear()}`;
+  });
+
+  // Rango Lunes - Domingo para la semana seleccionada según weekOffset()
+  readonly activeWeekRange = computed(() => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    // Lunes = 0 ... Domingo = 6
+    const diffToMonday = (currentDay + 6) % 7;
+
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday + (this.weekOffset() * 7));
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+
+    const startKey = this.toDateKey(monday);
+    const endKey = this.toDateKey(sunday);
+    const label = `${this.formatShortDate(startKey)} al ${this.formatShortDate(endKey)}`;
+
+    return { startKey, endKey, label };
   });
 
   // Leyenda de participantes con sus victorias en el mes seleccionado
@@ -111,12 +145,8 @@ export class HistoryComponent implements OnDestroy {
 
     const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Ajustar para que Lunes sea 0 y Domingo sea 6
     const startOffset = (firstDayOfMonth.getDay() + 6) % 7;
-
-    const now = new Date();
-    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayKey = this.toDateKey(new Date());
 
     const cells: CalendarDayCell[] = [];
 
@@ -152,15 +182,24 @@ export class HistoryComponent implements OnDestroy {
     return cells;
   });
 
-  // Pasos cronológicos de la carrera a partir del historial
+  // Pasos cronológicos de la carrera filtrados según el modo (Semana, Mes o Histórico)
+  // Todos los participantes parten desde 0 al inicio del período seleccionado.
   readonly raceSteps = computed<RaceStep[]>(() => {
     const dateMap = this.winnersByDate();
-    const sortedKeys = Array.from(dateMap.keys()).sort();
-    const runningScores: Record<string, number> = {};
+    const mode = this.raceFilter();
+    let sortedKeys = Array.from(dateMap.keys()).sort();
 
-    // Inicializar todos los participantes en 0
+    if (mode === 'week') {
+      const { startKey, endKey } = this.activeWeekRange();
+      sortedKeys = sortedKeys.filter(k => k >= startKey && k <= endKey);
+    } else if (mode === 'month') {
+      const prefix = `${this.viewYear()}-${String(this.viewMonth() + 1).padStart(2, '0')}-`;
+      sortedKeys = sortedKeys.filter(k => k.startsWith(prefix));
+    }
+
+    const runningScores: Record<string, number> = {};
     for (const p of this.participantsService.participants()) {
-      runningScores[p.name] = 0;
+      runningScores[p.name.trim()] = 0;
     }
 
     const steps: RaceStep[] = [];
@@ -180,6 +219,59 @@ export class HistoryComponent implements OnDestroy {
     return steps;
   });
 
+  // Resumen de líder o empate para la recompensa del período activo
+  readonly periodRewardSummary = computed<PeriodRewardSummary>(() => {
+    const mode = this.raceFilter();
+    const steps = this.raceSteps();
+
+    let periodTitle = 'Recompensa Semanal';
+    let rangeSubtitle = this.activeWeekRange().label;
+
+    if (mode === 'month') {
+      periodTitle = 'Recompensa Mensual';
+      rangeSubtitle = this.currentMonthLabel();
+    } else if (mode === 'all') {
+      periodTitle = 'Clasificación Histórica';
+      rangeSubtitle = 'Acumulado de todas las fechas';
+    }
+
+    if (steps.length === 0) {
+      return {
+        periodTitle,
+        rangeSubtitle,
+        hasWins: false,
+        isTie: false,
+        maxWins: 0,
+        leaders: []
+      };
+    }
+
+    const finalScores = steps[steps.length - 1].scores;
+    let maxWins = 0;
+    for (const val of Object.values(finalScores)) {
+      if (val > maxWins) maxWins = val;
+    }
+
+    const leaders: { name: string; color: string }[] = [];
+    for (const [name, wins] of Object.entries(finalScores)) {
+      if (wins === maxWins && maxWins > 0) {
+        leaders.push({
+          name,
+          color: this.participantsService.getColorForParticipantName(name)
+        });
+      }
+    }
+
+    return {
+      periodTitle,
+      rangeSubtitle,
+      hasWins: maxWins > 0,
+      isTie: leaders.length > 1,
+      maxWins,
+      leaders
+    };
+  });
+
   // Paso actualmente visible en la carrera
   readonly currentRaceStep = computed<RaceStep | null>(() => {
     const steps = this.raceSteps();
@@ -192,14 +284,13 @@ export class HistoryComponent implements OnDestroy {
     return steps[idx];
   });
 
-  // Barras horizontales ordenadas para la pista de carrera
+  // Barras horizontales ordenadas para la pista de carrera (partiendo de 0 en el período)
   readonly raceBars = computed<RaceBarItem[]>(() => {
     const step = this.currentRaceStep();
     const participants = this.participantsService.participants();
 
-    // Si hay historial, usamos el acumulado hasta el paso actual; si no, usamos las victorias generales
     const list = participants.map(p => {
-      const wins = step ? (step.scores[p.name.trim()] ?? 0) : (p.wins || 0);
+      const wins = step ? (step.scores[p.name.trim()] ?? 0) : 0;
       return {
         name: p.name,
         color: this.participantsService.getColorForParticipantName(p.name),
@@ -226,7 +317,7 @@ export class HistoryComponent implements OnDestroy {
   readonly padTop = 26;
   readonly padBottom = 42;
 
-  // Datos calculados para el gráfico SVG de líneas acumuladas
+  // Datos calculados para el gráfico SVG de líneas acumuladas del período
   readonly raceChartData = computed(() => {
     const allSteps = this.raceSteps();
     const activeIdx = this.activeStepIndex();
@@ -235,14 +326,12 @@ export class HistoryComponent implements OnDestroy {
     const plotW = this.svgWidth - this.padLeft - this.padRight;
     const plotH = this.svgHeight - this.padTop - this.padBottom;
 
-    // Puntos del eje X: Punto 0 ("Inicio") + cada fecha registrada
     const totalPoints = visibleSteps.length + 1;
     const getX = (i: number) =>
       totalPoints === 1
         ? this.padLeft
         : this.padLeft + (i / (totalPoints - 1)) * plotW;
 
-    // Determinar el máximo de victorias en el eje Y
     let maxWins = 1;
     for (const s of visibleSteps) {
       for (const val of Object.values(s.scores)) {
@@ -253,19 +342,16 @@ export class HistoryComponent implements OnDestroy {
     const getY = (val: number) =>
       this.padTop + plotH - (val / maxWins) * plotH;
 
-    // Líneas guía horizontales (Eje Y)
     const yTicks: { value: number; y: number }[] = [];
     for (let v = 0; v <= maxWins; v++) {
       yTicks.push({ value: v, y: getY(v) });
     }
 
-    // Etiquetas del eje X
     const xLabels: { label: string; x: number }[] = [
-      { label: 'Inicio', x: getX(0) },
+      { label: 'Inicio (0)', x: getX(0) },
       ...visibleSteps.map((s, idx) => ({ label: s.label, x: getX(idx + 1) }))
     ];
 
-    // Participantes que tienen al menos 1 victoria en el historial (o todos si nadie ha ganado aún)
     const finalScores = visibleSteps.length > 0 ? visibleSteps[visibleSteps.length - 1].scores : {};
     let activeParticipants = this.participantsService.participants().filter(
       p => (finalScores[p.name.trim()] || 0) > 0
@@ -315,7 +401,27 @@ export class HistoryComponent implements OnDestroy {
     this.stopRace();
   }
 
+  public setRaceFilter(mode: RaceFilterMode): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
+    this.raceFilter.set(mode);
+  }
+
+  public changeWeek(delta: number): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
+    this.weekOffset.update(w => w + delta);
+  }
+
+  public resetToCurrentWeek(): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
+    this.weekOffset.set(0);
+  }
+
   public prevMonth(): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
     if (this.viewMonth() === 0) {
       this.viewMonth.set(11);
       this.viewYear.update(y => y - 1);
@@ -325,6 +431,8 @@ export class HistoryComponent implements OnDestroy {
   }
 
   public nextMonth(): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
     if (this.viewMonth() === 11) {
       this.viewMonth.set(0);
       this.viewYear.update(y => y + 1);
@@ -334,6 +442,8 @@ export class HistoryComponent implements OnDestroy {
   }
 
   public goToCurrentMonth(): void {
+    this.stopRace();
+    this.activeStepIndex.set(null);
     const now = new Date();
     this.viewYear.set(now.getFullYear());
     this.viewMonth.set(now.getMonth());
@@ -383,13 +493,17 @@ export class HistoryComponent implements OnDestroy {
     this.activeStepIndex.set(index);
   }
 
+  private toDateKey(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   private extractDateKey(raw: string): string {
     if (!raw) return '';
     const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
     if (match) return match[1];
     const d = new Date(raw);
     if (isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return this.toDateKey(d);
   }
 
   private formatShortDate(dateKey: string): string {
@@ -401,4 +515,3 @@ export class HistoryComponent implements OnDestroy {
     return `${day} ${shortMonths[monthIdx] || ''}`;
   }
 }
-
