@@ -151,7 +151,7 @@
             <span class="legend-dot" [style.background-color]="l.color"></span>
             <strong>{{ l.name }}</strong>
           </span>
-          con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'victoria' : 'Venekos'
+          con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'Veneko' : 'Venekos'
             }}</span> en este período
         </div>
         <div class="reward-headline" *ngIf="summary.hasWins && summary.isTie">
@@ -160,7 +160,7 @@
             <span class="legend-dot" [style.background-color]="l.color"></span>
             <strong>{{ l.name }}</strong>
           </span>
-          empatados con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'victoria' :
+          empatados con <span class="highlight-total">{{ summary.maxWins }} {{ summary.maxWins === 1 ? 'Veneko' :
             'Venekos' }}</span>
         </div>
         <div class="reward-headline empty-reward" *ngIf="!summary.hasWins">
@@ -247,7 +247,7 @@
             <!-- Puntos en cada fecha -->
             <circle *ngFor="let d of s.dots" [attr.cx]="d.x" [attr.cy]="d.y" [attr.r]="d.wonThisDay ? 6 : 4"
               [attr.fill]="s.color" stroke="#0f172a" stroke-width="2">
-              <title>{{ s.name }} — {{ d.dateLabel }}: {{ d.value }} victoria(s)</title>
+              <title>{{ s.name }} — {{ d.dateLabel }}: {{ d.value }} Veneko(s)</title>
             </circle>
 
             <!-- Etiqueta con el nombre al final de la línea -->
