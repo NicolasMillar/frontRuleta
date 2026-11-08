@@ -164,6 +164,37 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
+   * Generador de números aleatorios con aleatoriedad criptográfica (CSPRNG)
+   * que asegura distribución uniforme sin sesgos de Math.random().
+   */
+  private getSecureRandomFloat(): number {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      const buffer = new Uint32Array(1);
+      window.crypto.getRandomValues(buffer);
+      return buffer[0] / (0xffffffff + 1);
+    }
+    return Math.random();
+  }
+
+  /**
+   * Obtiene un entero seguro en el rango [0, max - 1] sin sesgo de módulo.
+   */
+  private getSecureRandomInt(max: number): number {
+    if (max <= 1) return 0;
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      const buffer = new Uint32Array(1);
+      const limit = Math.floor(0x100000000 / max) * max;
+      let rand: number;
+      do {
+        window.crypto.getRandomValues(buffer);
+        rand = buffer[0];
+      } while (rand >= limit);
+      return rand % max;
+    }
+    return Math.floor(Math.random() * max);
+  }
+
+  /**
    * Ejecuta el giro lógico adaptado a cualquier cantidad N de sectores.
    */
   public spin(): void {
@@ -175,22 +206,22 @@ export class RouletteComponent implements OnInit {
     this.winner = null;
     this.spinResultStatus = null;
 
-    // 1. Seleccionar ganador al azar entre los N participantes actuales
-    const winnerIndex = Math.floor(Math.random() * this.slices.length);
+    // 1. Seleccionar ganador al azar mediante entropía criptográfica (crypto.getRandomValues)
+    const winnerIndex = this.getSecureRandomInt(this.slices.length);
     const selectedWinner = this.participants[winnerIndex];
     const winningSlice = this.slices[winnerIndex];
 
     // 2. Calcular ángulo exacto para que el sector ganador quede bajo el puntero superior (12 en punto)
     const sliceAngle = 360 / this.slices.length;
-    // Variación aleatoria natural dentro del sector (±30%)
-    const randomOffsetInSlice = (Math.random() - 0.5) * (sliceAngle * 0.6);
+    // Variación aleatoria natural dentro del sector (±30%) usando entropía criptográfica
+    const randomOffsetInSlice = (this.getSecureRandomFloat() - 0.5) * (sliceAngle * 0.6);
     const targetSliceAngle = winningSlice.midAngle + randomOffsetInSlice;
 
     // El ángulo que debe rotar para que `targetSliceAngle` coincida con la aguja superior (0°)
     const baseAngle = (360 - (targetSliceAngle % 360)) % 360;
 
     // Vueltas completas de giro (entre 5 y 8 vueltas completas)
-    const fullTurns = 5 + Math.floor(Math.random() * 3);
+    const fullTurns = 5 + this.getSecureRandomInt(4);
 
     // Calculamos el delta acumulativo para que siempre gire en sentido horario sin retrocesos
     const currentNormalized = this.currentRotation % 360;
