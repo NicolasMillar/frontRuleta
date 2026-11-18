@@ -1,43 +1,48 @@
 .navbar-container {
-  width: 100%;
-  background: rgba(15, 23, 42, 0.85);
+  inline-size: 100%;
+  background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-block-end: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
-  top: 0;
+  inset-block-start: 0;
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
+.navbar-container.is-measuring * {
+  transition: none !important;
+}
+
 .navbar-content {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0.75rem 1.5rem;
+  max-inline-size: 1040px;
+  margin-inline: auto;
+  padding: 0.75rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
+.navbar-content > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* Marca / Logo */
 .brand-link {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
   text-decoration: none;
   color: #f8fafc;
   font-weight: 800;
   font-size: 1.3rem;
+  border-radius: 8px;
   transition: opacity 0.2s ease;
 }
 
-.brand-link:hover {
-  opacity: 0.9;
-}
-
-.brand-icon {
-  font-size: 1.5rem;
-}
+.brand-link:hover { opacity: 0.9; }
+.brand-icon { font-size: 1.45rem; }
 
 .brand-highlight {
   background: linear-gradient(135deg, #ffd166 0%, #ef476f 100%);
@@ -45,51 +50,123 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* Navegación por pestañas */
-.nav-links {
+.navbar-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: rgba(30, 41, 59, 0.7);
+  gap: 0.75rem;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+}
+
+/* Botón Menú (visible solo cuando no cabe en línea) */
+.menu-button {
+  anchor-name: --menu-button;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  color: #f8fafc;
+  padding: 0.5rem 0.95rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.menu-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Vista colapsada (Popover nativo) */
+.nav-links {
+  list-style: none;
+  margin: 0;
+  position: fixed;
+  inset: auto;
+  inset-block-start: 4.5rem;
+  inset-block-start: anchor(--menu-button bottom);
+  inset-inline-end: 1rem;
+  inline-size: min(80dvw, 18rem);
+  max-inline-size: calc(100dvw - 2rem);
+  block-size: fit-content;
+  max-block-size: calc(100dvh - 6rem);
+  margin-block-start: 0.45rem;
+  padding: 0.5rem;
+  overflow: auto;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+}
+
+.nav-links:is(:popover-open, .\:popover-open) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Vista ancha (En línea) */
+.navbar-container.is-wide .menu-button {
+  display: none;
+}
+
+.navbar-container.is-wide .nav-links {
+  position: static;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  inline-size: auto;
+  max-inline-size: none;
+  block-size: auto;
+  max-block-size: none;
+  overflow: visible;
+  margin: 0;
   padding: 0.35rem 0.45rem;
   border-radius: 9999px;
+  background: rgba(30, 41, 59, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s ease;
+  box-shadow: none;
+}
+
+.navbar-container.is-wide .nav-links::backdrop {
+  display: none;
 }
 
 .nav-tab {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.55rem 1.15rem;
+  padding: 0.55rem 1.05rem;
   border-radius: 9999px;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.94rem;
   font-weight: 600;
-  color: #94a3b8;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #cbd5e1;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .nav-tab:hover:not(.disabled-tab) {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.nav-tab.active-tab {
+/* Indicador de página actual con hook aria-current="page" */
+.nav-tab[aria-current="page"] {
   background: linear-gradient(135deg, #ffd166 0%, #f78c6b 100%);
   color: #0f172a;
   box-shadow: 0 2px 10px rgba(255, 209, 102, 0.35);
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.tab-icon {
-  font-size: 1.1rem;
-}
+.tab-icon { font-size: 1.05rem; }
 
-/* Estado bloqueado mientras el API carga */
-.locked-nav {
-  opacity: 0.85;
-}
+.locked-nav { opacity: 0.85; }
 
 .nav-tab.disabled-tab {
   pointer-events: none;
@@ -106,19 +183,13 @@
   padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   box-shadow: 0 2px 5px rgba(239, 71, 111, 0.5);
-  margin-left: 0.2rem;
+  margin-inline-start: 0.2rem;
 }
 
-.active-tab .wins-badge {
+.nav-tab[aria-current="page"] .wins-badge {
   background: #0f172a;
   color: #ffd166;
   box-shadow: none;
-}
-
-.navbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
 }
 
 /* Botón de Sincronización */
@@ -126,15 +197,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #f1f5f9;
   padding: 0.5rem 0.95rem;
   border-radius: 9999px;
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -149,41 +220,36 @@
   cursor: not-allowed;
 }
 
+.brand-link:focus-visible,
+.menu-button:focus-visible,
+.nav-tab:focus-visible,
+.refresh-btn:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
 .refresh-icon {
   font-size: 0.95rem;
   display: inline-block;
-  transition: transform 0.2s ease;
 }
 
 .refresh-icon.spinning {
   animation: spinIcon 1s linear infinite;
 }
 
-@keyframes spinIcon {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
+@media (prefers-reduced-motion: reduce) {
+  .refresh-icon.spinning {
+    animation-duration: 5s;
   }
 }
 
-@media (max-width: 600px) {
-  .navbar-content {
-    padding: 0.6rem 1rem;
-  }
+@keyframes spinIcon {
+  to { rotate: 1turn; }
+}
 
-  .brand-title {
-    display: none;
-  }
-
-  .nav-tab {
-    padding: 0.5rem 0.85rem;
-    font-size: 0.88rem;
-  }
-
-  .chip-text {
-    display: none;
+@media (forced-colors: active) {
+  .nav-tab[aria-current="page"] {
+    border: 2px solid CanvasText;
+    text-decoration: underline;
   }
 }

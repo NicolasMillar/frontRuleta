@@ -12,7 +12,7 @@
   <!-- Contenedor visual de la ruleta y la aguja -->
   <div class="wheel-wrapper">
     <!-- Puntero / Indicador Superior (Flecha) -->
-    <div class="wheel-pointer" [class.is-spinning]="isSpinning">
+    <div class="wheel-pointer" [class.is-spinning]="isSpinning" aria-hidden="true">
       <svg viewBox="0 0 40 50" class="pointer-svg">
         <defs>
           <filter id="pointer-shadow" x="-20%" y="-20%" width="150%" height="150%">
@@ -27,7 +27,7 @@
 
     <!-- Rueda SVG -->
     <div class="wheel-stage">
-      <svg viewBox="0 0 500 500" class="wheel-svg">
+      <svg viewBox="0 0 500 500" class="wheel-svg" role="img" aria-label="Ruleta de participantes">
         <defs>
           <radialGradient id="hubGradient" cx="40%" cy="40%" r="60%">
             <stop offset="0%" stop-color="#ffffff" />
@@ -66,8 +66,11 @@
           </g>
         </g>
 
-        <!-- Eje central decorativo y botón rápido -->
-        <g class="center-hub-group" (click)="spin()" [class.disabled]="isSpinning">
+        <!-- Eje central decorativo y botón rápido accesible por teclado -->
+        <g class="center-hub-group" role="button" [attr.tabindex]="isSpinning ? -1 : 0"
+          [attr.aria-disabled]="isSpinning" aria-label="Girar ruleta"
+          (click)="spin()" (keydown.enter)="spin()" (keydown.space)="$event.preventDefault(); spin()"
+          [class.disabled]="isSpinning">
           <circle cx="250" cy="250" r="42" fill="url(#hubGradient)" stroke="#ffffff" stroke-width="4"
             filter="url(#pointer-shadow)" />
           <circle cx="250" cy="250" r="16" fill="#073B4C" />
@@ -81,7 +84,7 @@
 
   <!-- Botón de acción principal -->
   <div class="actions-wrapper">
-    <button class="spin-btn" (click)="spin()" [disabled]="isSpinning || slices.length === 0">
+    <button type="button" class="spin-btn" (click)="spin()" [disabled]="isSpinning || slices.length === 0">
       <span class="btn-glow"></span>
       <span class="btn-content">
         <span *ngIf="!isSpinning">🎯 ¡GIRAR RULETA!</span>
@@ -91,72 +94,74 @@
   </div>
 
   <!-- Lista informativa de participantes activos -->
-  <div class="participants-card">
-    <h3 class="card-title">Participantes Cargados</h3>
+  <section class="participants-card" aria-labelledby="participants-card-title">
+    <h2 id="participants-card-title" class="card-title">Participantes Cargados</h2>
     <div class="tags-container">
       <span *ngFor="let slice of slices" class="participant-tag" [style.border-left-color]="slice.color">
         <span class="color-dot" [style.background-color]="slice.color"></span>
         {{ slice.name }}
       </span>
     </div>
-  </div>
-
-  <!-- Modal emergente del Ganador -->
-  <div class="winner-modal-backdrop" *ngIf="winner" (click)="closeWinnerModal()">
-    <div class="winner-card"
-      [class.conflict-card]="spinResultStatus && !spinResultStatus.loading && !spinResultStatus.isOfficialWin"
-      (click)="$event.stopPropagation()">
-      <!-- Botón para cerrar en la esquina -->
-      <button class="modal-close-icon-btn" (click)="closeWinnerModal()" aria-label="Cerrar modal" title="Cerrar">
-        <svg viewBox="0 0 24 24" class="close-icon-svg">
-          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-        </svg>
-      </button>
-
-      <!-- Estado 1: Validando con el servidor -->
-      <ng-container *ngIf="spinResultStatus?.loading">
-        <div class="trophy-icon">⏳</div>
-        <h2 class="winner-heading">VALIDANDO GIRO...</h2>
-        <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
-          {{ winner.name }}
-        </div>
-        <p class="winner-subtext">{{ spinResultStatus?.message }}</p>
-      </ng-container>
-
-      <!-- Estado 2: Victoria Oficial del Día (200 OK) -->
-      <ng-container *ngIf="spinResultStatus && !spinResultStatus.loading && spinResultStatus.isOfficialWin">
-        <div class="trophy-icon">🏆</div>
-        <h2 class="winner-heading">¡TENEMOS UN PERDEDOR!</h2>
-        <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
-          {{ winner.name }}
-        </div>
-        <p class="winner-subtext official-msg">
-          ✅ {{ spinResultStatus.message }}
-        </p>
-      </ng-container>
-
-      <!-- Estado 3: Ya existe un ganador hoy (409 Conflict) -->
-      <ng-container *ngIf="spinResultStatus && !spinResultStatus.loading && !spinResultStatus.isOfficialWin">
-        <div class="trophy-icon">🔒</div>
-        <h2 class="winner-heading conflict-heading">GIRO EXTRA (SIN PUNTOS)</h2>
-        <p class="extra-spin-label">
-          La ruleta cayó en <strong>{{ winner.name }}</strong>, pero:
-        </p>
-
-        <div class="daily-conflict-box">
-          <p class="conflict-alert-text">
-            ⚠️ {{ spinResultStatus.message }}
-          </p>
-          <div class="official-daily-winner" *ngIf="spinResultStatus.dailyWinnerName">
-            <span class="official-label">Perdedor oficial de hoy:</span>
-            <span class="official-winner-pill"
-              [style.background-color]="getParticipantColorByName(spinResultStatus.dailyWinnerName)">
-              🏆 {{ spinResultStatus.dailyWinnerName }}
-            </span>
-          </div>
-        </div>
-      </ng-container>
-    </div>
-  </div>
+  </section>
 </div>
+
+<!-- Modal nativo (<dialog>) del Ganador en el Top Layer -->
+<dialog #winnerDialog id="winner-result-dialog" class="winner-dialog"
+  [class.conflict-card]="spinResultStatus && !spinResultStatus.loading && !spinResultStatus.isOfficialWin"
+  aria-labelledby="winner-dialog-title" closedby="any"
+  (close)="onWinnerDialogClose()" (cancel)="onWinnerDialogCancel($event)">
+  <div class="winner-card-inner" *ngIf="winner">
+    <!-- Botón nativo para cerrar con autofocus inicial -->
+    <button type="button" class="modal-close-icon-btn" autofocus (click)="closeWinnerModal()"
+      aria-label="Cerrar resultado" title="Cerrar">
+      <svg viewBox="0 0 24 24" class="close-icon-svg" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <!-- Estado 1: Validando con el servidor -->
+    <ng-container *ngIf="spinResultStatus?.loading">
+      <div class="trophy-icon" aria-hidden="true">⏳</div>
+      <h2 id="winner-dialog-title" class="winner-heading">VALIDANDO GIRO...</h2>
+      <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
+        {{ winner.name }}
+      </div>
+      <p class="winner-subtext">{{ spinResultStatus?.message }}</p>
+    </ng-container>
+
+    <!-- Estado 2: Victoria Oficial del Día (200 OK) -->
+    <ng-container *ngIf="spinResultStatus && !spinResultStatus.loading && spinResultStatus.isOfficialWin">
+      <div class="trophy-icon" aria-hidden="true">🏆</div>
+      <h2 id="winner-dialog-title" class="winner-heading">¡TENEMOS UN PERDEDOR!</h2>
+      <div class="winner-badge" [style.background-color]="getWinnerColor(winner)">
+        {{ winner.name }}
+      </div>
+      <p class="winner-subtext official-msg">
+        ✅ {{ spinResultStatus.message }}
+      </p>
+    </ng-container>
+
+    <!-- Estado 3: Ya existe un ganador hoy (409 Conflict) -->
+    <ng-container *ngIf="spinResultStatus && !spinResultStatus.loading && !spinResultStatus.isOfficialWin">
+      <div class="trophy-icon" aria-hidden="true">🔒</div>
+      <h2 id="winner-dialog-title" class="winner-heading conflict-heading">GIRO EXTRA (SIN PUNTOS)</h2>
+      <p class="extra-spin-label">
+        La ruleta cayó en <strong>{{ winner.name }}</strong>, pero:
+      </p>
+
+      <div class="daily-conflict-box">
+        <p class="conflict-alert-text">
+          ⚠️ {{ spinResultStatus.message }}
+        </p>
+        <div class="official-daily-winner" *ngIf="spinResultStatus.dailyWinnerName">
+          <span class="official-label">Perdedor oficial de hoy:</span>
+          <span class="official-winner-pill"
+            [style.background-color]="getParticipantColorByName(spinResultStatus.dailyWinnerName)">
+            🏆 {{ spinResultStatus.dailyWinnerName }}
+          </span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</dialog>

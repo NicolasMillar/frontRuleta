@@ -1,21 +1,19 @@
-<div class="loading-wrapper">
+<div class="loading-wrapper" role="status" aria-live="polite">
   <div class="loading-card">
     <div class="spinner-container">
-      <!-- Spinner Arco / Media luna minimalista -->
-      <div class="spinner-arc"></div>
+      <!-- Spinner nativo indeterminado (<progress> sin atributo value) -->
+      <progress class="loading-spinner" [attr.aria-label]="message"></progress>
     </div>
 
     <!-- Textos informativos de carga -->
-    <h3 class="loading-title">{{ message }}</h3>
+    <h2 class="loading-title">{{ message }}</h2>
     <p class="loading-subtitle">{{ subMessage }}</p>
 
-    <!-- Barra de progreso simulada para dar sensación de actividad -->
-    <div class="indeterminate-progress-bar">
-      <div class="progress-bar-indicator"></div>
-    </div>
+    <!-- Barra de progreso indeterminada decorativa (el spinner ya anuncia el estado) -->
+    <progress class="loading-progress" aria-hidden="true"></progress>
 
     <div class="render-hint">
-      <span class="hint-icon">⚡</span>
+      <span class="hint-icon" aria-hidden="true">⚡</span>
       <span>Si el servidor estaba inactivo, puede tomar unos segundos en despertar.</span>
     </div>
   </div>

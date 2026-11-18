@@ -1,4 +1,4 @@
-import { Component, OnInit, effect } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import confetti from 'canvas-confetti';
 import { Participant, SpinResultStatus, WheelSlice } from '../../models/roulette.model';
@@ -13,6 +13,8 @@ import { LoadingComponent } from '../loading/loading.component';
   styleUrl: './roulette.component.css'
 })
 export class RouletteComponent implements OnInit {
+  @ViewChild('winnerDialog') winnerDialogRef?: ElementRef<HTMLDialogElement>;
+
   // Lista de participantes activa sincronizada con el servicio
   participants: Participant[] = [];
 
@@ -238,6 +240,7 @@ export class RouletteComponent implements OnInit {
         isOfficialWin: false,
         message: 'Validando resultado del día con el servidor...'
       };
+      this.openWinnerDialog();
 
       // Persistimos la victoria en el backend (POST /participants/win con { name })
       this.participantsService.registerWin(selectedWinner.name, (status) => {
@@ -251,10 +254,13 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
-   * Efecto festivo de confeti al anunciarse el ganador.
+   * Efecto festivo de confeti al anunciarse el ganador (respetando prefers-reduced-motion).
    */
   private celebrate(): void {
-    if (typeof window !== 'undefined') {
+    if (
+      typeof window !== 'undefined' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       confetti({
         particleCount: 120,
         spread: 80,
@@ -300,10 +306,101 @@ export class RouletteComponent implements OnInit {
   }
 
   /**
-   * Cierra el modal del ganador
+   * Abre el <dialog> nativo del ganador en el top layer
+   */
+  private openWinnerDialog(): void {
+    const dialog = this.winnerDialogRef?.nativeElement;
+    if (!dialog || dialog.open) return;
+    this.attachClosedByFallback(dialog);
+    dialog.showModal();
+  }
+
+  /**
+   * Cierra el modal del ganador con animación progresiva de salida
    */
   public closeWinnerModal(): void {
+    const dialog = this.winnerDialogRef?.nativeElement;
+    if (!dialog || !dialog.open) {
+      this.winner = null;
+      this.spinResultStatus = null;
+      return;
+    }
+
+    if (this.supportsTopLayerExit()) {
+      dialog.close('dismiss');
+      return;
+    }
+
+    dialog.setAttribute('data-closing', '');
+    const animations = dialog.getAnimations({ subtree: true });
+    if (animations.length > 0) {
+      Promise.race([
+        Promise.allSettled(animations.map((a) => a.finished)),
+        new Promise((resolve) => setTimeout(resolve, 400))
+      ]).then(() => {
+        if (!dialog.hasAttribute('data-closing')) return;
+        dialog.removeAttribute('data-closing');
+        dialog.close('dismiss');
+      });
+    } else {
+      dialog.removeAttribute('data-closing');
+      dialog.close('dismiss');
+    }
+  }
+
+  /**
+   * Limpia returnValue y estado al cerrarse el <dialog> (incluyendo tecla Esc)
+   */
+  public onWinnerDialogClose(): void {
+    const dialog = this.winnerDialogRef?.nativeElement;
+    if (dialog) {
+      dialog.returnValue = '';
+    }
     this.winner = null;
     this.spinResultStatus = null;
+  }
+
+  public onWinnerDialogCancel(event: Event): void {
+    if (!this.supportsTopLayerExit()) {
+      event.preventDefault();
+      this.closeWinnerModal();
+    }
+  }
+
+  /**
+   * Fallback de light dismiss para navegadores sin `closedby="any"` (e.g. Safari)
+   */
+  private attachClosedByFallback(dialog: HTMLDialogElement): void {
+    if ('closedBy' in HTMLDialogElement.prototype) return;
+    if (dialog.dataset['closedbyBound'] === 'true') return;
+    dialog.dataset['closedbyBound'] = 'true';
+
+    const isOutside = (e: PointerEvent) => {
+      const r = dialog.getBoundingClientRect();
+      return (
+        e.clientX < r.left ||
+        e.clientX > r.right ||
+        e.clientY < r.top ||
+        e.clientY > r.bottom
+      );
+    };
+
+    let pressedOutside = false;
+    dialog.addEventListener('pointerdown', (e) => {
+      pressedOutside = isOutside(e);
+    });
+    dialog.addEventListener('pointerup', (e) => {
+      if (pressedOutside && isOutside(e)) {
+        this.closeWinnerModal();
+      }
+    });
+  }
+
+  private supportsTopLayerExit(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      Boolean(window.CSS?.supports?.('overlay', 'auto')) &&
+      Boolean(window.CSS?.supports?.('transition-behavior', 'allow-discrete'))
+    );
   }
 }

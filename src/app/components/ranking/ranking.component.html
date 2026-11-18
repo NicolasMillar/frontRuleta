@@ -6,7 +6,7 @@
   <!-- Encabezado de la Sección -->
   <header class="ranking-header">
     <div class="header-titles">
-      <h1 class="title">Contador de Venekos</h1>
+      <h1 id="ranking-table-title" class="title">Tabla de Victorias</h1>
       <p class="subtitle">
         Total de giros registrados:
         <span class="highlight-total">{{ participantsService.totalWins() }}</span>
@@ -15,40 +15,50 @@
 
     <!-- Acciones del Encabezado -->
     <div class="header-actions">
-      <button class="sync-data-btn" (click)="participantsService.refreshFromApi()"
+      <button type="button" class="sync-data-btn" (click)="participantsService.refreshFromApi()"
         [disabled]="participantsService.isLoading()" title="Sincronizar del servidor">
         <span>🔄</span> Sincronizar
       </button>
 
-      <!-- Contenedor con tooltip para mostrar por qué está inactivo fuera del 1 de enero -->
-      <div class="reset-btn-wrapper"
-        [attr.title]="!isNewYearDay ? 'Este botón solo se habilita el 1 de enero de cada año' : 'Reiniciar contadores e historial del servidor'">
-        <button class="reset-btn" [disabled]="participantsService.isLoading() || !isNewYearDay" (click)="resetScores()">
+      <!-- Botón de reinicio + Toggletip nativo accesible cuando está bloqueado -->
+      <div class="reset-control-group">
+        <button type="button" class="reset-btn" [disabled]="participantsService.isLoading() || !isNewYearDay"
+          (click)="openResetDialog()">
           <span>{{ isNewYearDay ? '🗑️' : '🔒' }}</span> Reiniciar Marcador
         </button>
-        <span class="reset-tooltip" *ngIf="!isNewYearDay">
-          🔒 Bloqueado: solo disponible el 1 de enero de cada año
-        </span>
+
+        <ng-container *ngIf="!isNewYearDay">
+          <button type="button" class="toggletip-btn"
+            [attr.interestfor]="'reset-lock-tip'"
+            popovertarget="reset-lock-tip"
+            popovertargetaction="show"
+            aria-label="¿Por qué está bloqueado el reinicio?">
+            ?
+          </button>
+          <div id="reset-lock-tip" popover="hint" role="tooltip" class="reset-popover-tip">
+            🔒 Bloqueado: solo se habilita el <strong>1 de enero</strong> de cada año para reiniciar la temporada.
+          </div>
+        </ng-container>
       </div>
     </div>
   </header>
 
-  <!-- Tabla / Lista de Posiciones -->
+  <!-- Tabla / Lista de Posiciones Responsiva (Container Queries + Scroll accesible por teclado) -->
   <div class="table-card">
-    <div class="table-responsive">
+    <div tabindex="0" role="region" aria-labelledby="ranking-table-title" class="table-responsive">
       <table class="ranking-table">
         <thead>
           <tr>
-            <th class="col-rank">Posición</th>
-            <th class="col-name">Participante</th>
-            <th class="col-wins">Victorias</th>
-            <th class="col-rate">% de Éxito</th>
+            <th scope="col" class="col-rank">Posición</th>
+            <th scope="col" class="col-name">Participante</th>
+            <th scope="col" class="col-wins">Victorias</th>
+            <th scope="col" class="col-rate">% de Éxito</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of rankedParticipants(); let i = index" [class.top-1]="i === 0 && item.wins > 0"
             [class.top-2]="i === 1 && item.wins > 0" [class.top-3]="i === 2 && item.wins > 0">
-            <!-- Medalla / Puesto -->
+            <!-- Nombre y Avatar (Encabezado de fila semántico para tarjetas móviles) -->
             <td class="col-rank">
               <span class="rank-badge" *ngIf="i === 0 && item.wins > 0">🥇 1º</span>
               <span class="rank-badge" *ngIf="i === 1 && item.wins > 0">🥈 2º</span>
@@ -57,14 +67,14 @@
             </td>
 
             <!-- Nombre y Avatar -->
-            <td class="col-name">
+            <th scope="row" class="col-name">
               <div class="participant-info">
                 <span class="avatar-circle" [style.background-color]="getParticipantColor(i, item)">
                   {{ item.name.charAt(0).toUpperCase() }}
                 </span>
                 <span class="participant-name">{{ item.name }}</span>
               </div>
-            </td>
+            </th>
 
             <!-- Contador de Victorias -->
             <td class="col-wins">
@@ -96,3 +106,23 @@
     </a>
   </div>
 </div>
+
+<!-- Diálogo nativo (<dialog>) de confirmación de reinicio -->
+<dialog #resetDialog id="reset-confirm-dialog" class="confirm-dialog" aria-labelledby="reset-dialog-title"
+  closedby="any" (close)="onResetDialogClose()" (cancel)="onDialogCancel($event)">
+  <div class="dialog-body">
+    <div class="dialog-icon">⚠️</div>
+    <h2 id="reset-dialog-title" class="dialog-title">¿Reiniciar el marcador?</h2>
+    <p class="dialog-description">
+      Esta acción limpiará todo el historial diario y restablecerá a <strong>0</strong> los contadores de victorias en el servidor.
+    </p>
+    <form method="dialog" class="dialog-actions">
+      <button type="button" class="dialog-btn dialog-btn-cancel" autofocus (click)="requestAnimatedClose('cancel')">
+        Cancelar
+      </button>
+      <button type="button" class="dialog-btn dialog-btn-confirm" (click)="requestAnimatedClose('confirm')">
+        Sí, reiniciar todo
+      </button>
+    </form>
+  </div>
+</dialog>

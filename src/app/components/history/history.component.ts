@@ -1,5 +1,5 @@
-import { Component, computed, signal, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AfterViewInit, Component, PLATFORM_ID, computed, inject, signal, OnDestroy } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ParticipantsService } from '../../services/participants.service';
 import { DailyWinnerRecord } from '../../models/roulette.model';
@@ -58,7 +58,9 @@ export interface PeriodRewardSummary {
   templateUrl: './history.component.html',
   styleUrl: './history.component.css'
 })
-export class HistoryComponent implements OnDestroy {
+export class HistoryComponent implements AfterViewInit, OnDestroy {
+  private platformId = inject(PLATFORM_ID);
+  readonly filterModes: RaceFilterMode[] = ['week', 'month', 'all'];
   readonly weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   readonly monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -397,14 +399,38 @@ export class HistoryComponent implements OnDestroy {
 
   constructor(public participantsService: ParticipantsService) { }
 
+  ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.setupPopoverHintFallback();
+  }
+
   ngOnDestroy(): void {
     this.stopRace();
   }
 
-  public setRaceFilter(mode: RaceFilterMode): void {
+  public setRaceFilter(mode: RaceFilterMode, tabEl?: HTMLElement): void {
     this.stopRace();
     this.activeStepIndex.set(null);
     this.raceFilter.set(mode);
+    tabEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  public onTabKeydown(event: KeyboardEvent, currentMode: RaceFilterMode): void {
+    const idx = this.filterModes.indexOf(currentMode);
+    if (idx === -1) return;
+
+    let nextIdx = idx;
+    if (event.key === 'ArrowRight') nextIdx = (idx + 1) % this.filterModes.length;
+    else if (event.key === 'ArrowLeft') nextIdx = (idx - 1 + this.filterModes.length) % this.filterModes.length;
+    else if (event.key === 'Home') nextIdx = 0;
+    else if (event.key === 'End') nextIdx = this.filterModes.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextMode = this.filterModes[nextIdx];
+    const nextBtn = document.getElementById(`tab-${nextMode}`);
+    this.setRaceFilter(nextMode, nextBtn ?? undefined);
+    nextBtn?.focus();
   }
 
   public changeWeek(delta: number): void {
@@ -452,7 +478,33 @@ export class HistoryComponent implements OnDestroy {
   public scrollToRace(): void {
     const el = document.getElementById('race-chart-section');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const reduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+
+  private setupPopoverHintFallback(): void {
+    if (!Object.hasOwn(HTMLElement.prototype, 'popover')) return;
+    const probe = document.createElement('div');
+    probe.popover = 'hint';
+    if (probe.popover !== 'hint') {
+      document.addEventListener(
+        'beforetoggle',
+        (event: Event) => {
+          const toggleEvent = event as ToggleEvent;
+          const target = toggleEvent.target as HTMLElement | null;
+          if (!target) return;
+          const isToggletip =
+            target.getAttribute('popover') === 'hint' &&
+            document.querySelector(`[popovertarget="${CSS.escape(target.id)}"]`);
+          if (toggleEvent.newState === 'open' && isToggletip) {
+            target.popover = 'auto';
+          }
+        },
+        true
+      );
     }
   }
 
